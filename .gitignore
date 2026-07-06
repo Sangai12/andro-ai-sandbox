@@ -1,0 +1,71 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python packaging
+*.egg-info/
+
+# Testing / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# macOS
+# =========================
+.DS_Store
+
+# =========================
+# IDEs
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.*
+
+# =========================
+# Generated Project Data
+# =========================
+uploads/*
+reports/*
+logs/*
+
+# Keep placeholder files
+!uploads/.gitkeep
+!reports/.gitkeep
+!logs/.gitkeep
+
+# =========================
+# Databases
+# =========================
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# Generated Reports
+# =========================
+reports/*.html
+reports/*.pdf
+
+# =========================
+# Android Files
+# =========================
+*.apk
+*.dex
+*.jar
+*.aar
