@@ -12,6 +12,7 @@ Current scope:
 - Extract native library information
 - Extract DEX metadata
 - Extract string indicators
+- Extract YARA scan results
 - Detect evidence-based security findings
 - Calculate overall risk score
 - Generate risk summary
@@ -31,6 +32,7 @@ from backend.risk_engine import analyze_static_findings
 from backend.risk_score import calculate_risk_score
 from backend.risk_summary import generate_risk_summary
 from backend.string_analyzer import extract_string_indicators
+from backend.yara_analyzer import scan_with_yara
 
 
 def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
@@ -56,6 +58,11 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     dex_analysis = extract_dex_metadata(apk)
     string_analysis = extract_string_indicators(apk)
 
+    yara_analysis = scan_with_yara(
+        apk_path=apk_file,
+        rule_file=Path("rules/android_basic_rules.yar"),
+    )
+
     findings = analyze_static_findings(
         permissions=permissions,
         apk=apk,
@@ -63,6 +70,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         dex_analysis=dex_analysis,
         string_analysis=string_analysis,
         certificates=certificates,
+        yara_analysis=yara_analysis,
     )
 
     risk_analysis = calculate_risk_score(findings)
@@ -114,6 +122,9 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
 
         "suspicious_commands": string_analysis["suspicious_commands"],
         "suspicious_command_count": string_analysis["suspicious_command_count"],
+
+        "yara_matched_rules": yara_analysis["matched_rules"],
+        "yara_match_count": yara_analysis["match_count"],
 
         "risk_score": risk_analysis["risk_score"],
         "risk_level": risk_analysis["risk_level"],

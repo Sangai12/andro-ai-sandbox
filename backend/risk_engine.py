@@ -11,6 +11,7 @@ Current scope:
 - Network detector
 - Certificate detector
 - Code threat detector
+- YARA detector
 """
 
 from typing import Any
@@ -36,6 +37,9 @@ from backend.detectors.certificate_detector import (
 from backend.detectors.code_threat_detector import (
     detect_code_threat_findings,
 )
+from backend.detectors.yara_detector import (
+    detect_yara_findings,
+)
 
 
 def analyze_static_findings(
@@ -45,6 +49,7 @@ def analyze_static_findings(
     dex_analysis: dict[str, Any],
     string_analysis: dict[str, Any],
     certificates: list[dict[str, Any]],
+    yara_analysis: dict[str, Any],
 ) -> list[dict[str, str]]:
     """
     Run all static detectors and combine their findings.
@@ -78,6 +83,10 @@ def analyze_static_findings(
 
     findings.extend(
         detect_code_threat_findings(string_analysis)
+    )
+
+    findings.extend(
+        detect_yara_findings(yara_analysis)
     )
 
     return findings

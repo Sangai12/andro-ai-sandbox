@@ -70,6 +70,8 @@ def build_analysis_report(
             "suspicious_command_count": analysis_data[
                 "suspicious_command_count"
             ],
+            "yara_matched_rules": analysis_data["yara_matched_rules"],
+            "yara_match_count": analysis_data["yara_match_count"],
         },
         "findings": analysis_data["findings"],
         "finding_count": analysis_data["finding_count"],
