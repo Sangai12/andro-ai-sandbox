@@ -90,6 +90,11 @@ def build_analysis_report(
             ],
             "crypto_wallets": analysis_data["crypto_wallets"],
             "crypto_wallet_count": analysis_data["crypto_wallet_count"],
+            "api_usage": analysis_data["api_usage"],
+            "api_usage_categories": analysis_data["api_usage_categories"],
+            "api_usage_category_count": analysis_data[
+                "api_usage_category_count"
+            ],
             "yara_matched_rules": analysis_data["yara_matched_rules"],
             "yara_match_count": analysis_data["yara_match_count"],
         },

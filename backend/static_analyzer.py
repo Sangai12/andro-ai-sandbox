@@ -13,6 +13,7 @@ Current scope:
 - Extract DEX metadata
 - Extract string indicators
 - Extract IOC indicators
+- Extract API usage indicators
 - Extract YARA scan results
 - Detect evidence-based security findings
 - Calculate overall risk score
@@ -25,6 +26,7 @@ from typing import Any
 
 from androguard.core.apk import APK
 
+from backend.api_usage_analyzer import extract_api_usage
 from backend.certificate_analyzer import extract_certificate_metadata
 from backend.dex_analyzer import extract_dex_metadata
 from backend.ioc_analyzer import extract_iocs
@@ -60,6 +62,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     dex_analysis = extract_dex_metadata(apk)
     string_analysis = extract_string_indicators(apk)
     ioc_analysis = extract_iocs(string_analysis)
+    api_usage_analysis = extract_api_usage(string_analysis)
 
     yara_analysis = scan_with_yara(
         apk_path=apk_file,
@@ -74,6 +77,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         string_analysis=string_analysis,
         certificates=certificates,
         yara_analysis=yara_analysis,
+        api_usage_analysis=api_usage_analysis,
     )
 
     risk_analysis = calculate_risk_score(findings)
@@ -146,6 +150,12 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         ],
         "crypto_wallets": ioc_analysis["crypto_wallets"],
         "crypto_wallet_count": ioc_analysis["crypto_wallet_count"],
+
+        "api_usage": api_usage_analysis["api_usage"],
+        "api_usage_categories": api_usage_analysis["api_usage_categories"],
+        "api_usage_category_count": api_usage_analysis[
+            "api_usage_category_count"
+        ],
 
         "yara_matched_rules": yara_analysis["matched_rules"],
         "yara_match_count": yara_analysis["match_count"],
