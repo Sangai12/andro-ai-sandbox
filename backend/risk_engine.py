@@ -10,6 +10,7 @@ Current scope:
 - DEX detector
 - Network detector
 - Certificate detector
+- Code threat detector
 """
 
 from typing import Any
@@ -31,6 +32,9 @@ from backend.detectors.network_detector import (
 )
 from backend.detectors.certificate_detector import (
     detect_certificate_findings,
+)
+from backend.detectors.code_threat_detector import (
+    detect_code_threat_findings,
 )
 
 
@@ -70,6 +74,10 @@ def analyze_static_findings(
 
     findings.extend(
         detect_certificate_findings(certificates)
+    )
+
+    findings.extend(
+        detect_code_threat_findings(string_analysis)
     )
 
     return findings
