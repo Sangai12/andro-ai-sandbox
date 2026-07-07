@@ -7,6 +7,7 @@ Current scope:
 - Load APK files
 - Extract basic APK metadata
 - Extract requested permissions
+- Extract manifest components
 """
 
 from pathlib import Path
@@ -17,13 +18,13 @@ from androguard.core.apk import APK
 
 def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     """
-    Extract basic metadata and permissions from an APK file.
+    Extract static metadata, permissions, and manifest components from an APK file.
 
     Args:
         apk_path: Path to the APK file.
 
     Returns:
-        Dictionary containing APK metadata and permissions.
+        Dictionary containing APK metadata, permissions, and manifest components.
     """
     apk_file = Path(apk_path)
 
@@ -33,6 +34,10 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     apk = APK(str(apk_file))
 
     permissions = apk.get_permissions()
+    activities = apk.get_activities()
+    services = apk.get_services()
+    receivers = apk.get_receivers()
+    providers = apk.get_providers()
 
     return {
         "package_name": apk.get_package(),
@@ -42,4 +47,12 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         "target_sdk": apk.get_target_sdk_version(),
         "permissions": permissions,
         "permission_count": len(permissions),
+        "activities": activities,
+        "activity_count": len(activities),
+        "services": services,
+        "service_count": len(services),
+        "receivers": receivers,
+        "receiver_count": len(receivers),
+        "providers": providers,
+        "provider_count": len(providers),
     }
