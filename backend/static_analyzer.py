@@ -12,6 +12,7 @@ Current scope:
 - Extract native library information
 - Extract DEX metadata
 - Extract string indicators
+- Extract IOC indicators
 - Extract YARA scan results
 - Detect evidence-based security findings
 - Calculate overall risk score
@@ -26,6 +27,7 @@ from androguard.core.apk import APK
 
 from backend.certificate_analyzer import extract_certificate_metadata
 from backend.dex_analyzer import extract_dex_metadata
+from backend.ioc_analyzer import extract_iocs
 from backend.native_analyzer import extract_native_libraries
 from backend.report_generator import build_analysis_report
 from backend.risk_engine import analyze_static_findings
@@ -57,6 +59,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     native_analysis = extract_native_libraries(apk)
     dex_analysis = extract_dex_metadata(apk)
     string_analysis = extract_string_indicators(apk)
+    ioc_analysis = extract_iocs(string_analysis)
 
     yara_analysis = scan_with_yara(
         apk_path=apk_file,
@@ -122,6 +125,27 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
 
         "suspicious_commands": string_analysis["suspicious_commands"],
         "suspicious_command_count": string_analysis["suspicious_command_count"],
+
+        "domains": ioc_analysis["domains"],
+        "domain_count": ioc_analysis["domain_count"],
+        "onion_links": ioc_analysis["onion_links"],
+        "onion_link_count": ioc_analysis["onion_link_count"],
+        "telegram_links": ioc_analysis["telegram_links"],
+        "telegram_link_count": ioc_analysis["telegram_link_count"],
+        "discord_links": ioc_analysis["discord_links"],
+        "discord_link_count": ioc_analysis["discord_link_count"],
+        "github_links": ioc_analysis["github_links"],
+        "github_link_count": ioc_analysis["github_link_count"],
+        "pastebin_links": ioc_analysis["pastebin_links"],
+        "pastebin_link_count": ioc_analysis["pastebin_link_count"],
+        "firebase_links": ioc_analysis["firebase_links"],
+        "firebase_link_count": ioc_analysis["firebase_link_count"],
+        "cloud_storage_links": ioc_analysis["cloud_storage_links"],
+        "cloud_storage_link_count": ioc_analysis[
+            "cloud_storage_link_count"
+        ],
+        "crypto_wallets": ioc_analysis["crypto_wallets"],
+        "crypto_wallet_count": ioc_analysis["crypto_wallet_count"],
 
         "yara_matched_rules": yara_analysis["matched_rules"],
         "yara_match_count": yara_analysis["match_count"],

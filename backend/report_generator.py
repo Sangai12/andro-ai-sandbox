@@ -70,6 +70,26 @@ def build_analysis_report(
             "suspicious_command_count": analysis_data[
                 "suspicious_command_count"
             ],
+            "domains": analysis_data["domains"],
+            "domain_count": analysis_data["domain_count"],
+            "onion_links": analysis_data["onion_links"],
+            "onion_link_count": analysis_data["onion_link_count"],
+            "telegram_links": analysis_data["telegram_links"],
+            "telegram_link_count": analysis_data["telegram_link_count"],
+            "discord_links": analysis_data["discord_links"],
+            "discord_link_count": analysis_data["discord_link_count"],
+            "github_links": analysis_data["github_links"],
+            "github_link_count": analysis_data["github_link_count"],
+            "pastebin_links": analysis_data["pastebin_links"],
+            "pastebin_link_count": analysis_data["pastebin_link_count"],
+            "firebase_links": analysis_data["firebase_links"],
+            "firebase_link_count": analysis_data["firebase_link_count"],
+            "cloud_storage_links": analysis_data["cloud_storage_links"],
+            "cloud_storage_link_count": analysis_data[
+                "cloud_storage_link_count"
+            ],
+            "crypto_wallets": analysis_data["crypto_wallets"],
+            "crypto_wallet_count": analysis_data["crypto_wallet_count"],
             "yara_matched_rules": analysis_data["yara_matched_rules"],
             "yara_match_count": analysis_data["yara_match_count"],
         },
