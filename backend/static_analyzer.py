@@ -53,6 +53,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         permissions=permissions,
         apk=apk,
         native_analysis=native_analysis,
+        dex_analysis=dex_analysis,
     )
 
     return {

@@ -7,11 +7,11 @@ Current scope:
 - Permission detector
 - Manifest detector
 - Native library detector
+- DEX detector
 
 Future:
 - Certificate detector
 - Network detector
-- DEX detector
 """
 
 from typing import Any
@@ -25,12 +25,16 @@ from backend.detectors.manifest_detector import (
 from backend.detectors.native_detector import (
     detect_native_findings,
 )
+from backend.detectors.dex_detector import (
+    detect_dex_findings,
+)
 
 
 def analyze_static_findings(
     permissions: list[str],
     apk: Any,
     native_analysis: dict[str, Any],
+    dex_analysis: dict[str, Any],
 ) -> list[dict[str, str]]:
     """
     Run all static detectors and combine their findings.
@@ -48,6 +52,10 @@ def analyze_static_findings(
 
     findings.extend(
         detect_native_findings(native_analysis)
+    )
+
+    findings.extend(
+        detect_dex_findings(dex_analysis)
     )
 
     return findings
