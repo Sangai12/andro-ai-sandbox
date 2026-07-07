@@ -3,17 +3,20 @@ AndroAI Sandbox - Upload Module
 
 Handles APK uploads.
 
-Phase 5 scope:
+Phase 5 and Phase 6 scope:
 - Receive APK files
 - Validate APK extension
 - Generate file hashes
 - Save uploaded APK using SHA-256 filename
+- Extract basic APK metadata
 """
 
 from pathlib import Path
 import hashlib
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from backend.static_analyzer import extract_apk_metadata
 
 router = APIRouter(
     prefix="/upload",
@@ -27,7 +30,7 @@ UPLOAD_DIRECTORY.mkdir(exist_ok=True)
 @router.post("/")
 async def upload_apk(file: UploadFile = File(...)):
     """
-    Upload an APK file and generate evidence metadata.
+    Upload an APK file, generate evidence metadata, and extract APK metadata.
     """
 
     if not file.filename.lower().endswith(".apk"):
@@ -48,6 +51,8 @@ async def upload_apk(file: UploadFile = File(...)):
     with open(destination, "wb") as apk_file:
         apk_file.write(contents)
 
+    metadata = extract_apk_metadata(destination)
+
     return {
         "original_filename": file.filename,
         "stored_filename": stored_filename,
@@ -57,4 +62,5 @@ async def upload_apk(file: UploadFile = File(...)):
         "sha256": sha256_hash,
         "saved_to": str(destination),
         "status": "uploaded",
+        "metadata": metadata,
     }
