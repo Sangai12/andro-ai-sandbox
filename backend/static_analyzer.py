@@ -48,6 +48,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     findings = analyze_static_findings(
         permissions=permissions,
         apk=apk,
+        native_analysis=native_analysis,
     )
 
     return {

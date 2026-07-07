@@ -6,10 +6,10 @@ Coordinates all evidence detectors.
 Current scope:
 - Permission detector
 - Manifest detector
+- Native library detector
 
 Future:
 - Certificate detector
-- Native library detector
 - Network detector
 - DEX detector
 """
@@ -22,11 +22,15 @@ from backend.detectors.permission_detector import (
 from backend.detectors.manifest_detector import (
     detect_manifest_findings,
 )
+from backend.detectors.native_detector import (
+    detect_native_findings,
+)
 
 
 def analyze_static_findings(
     permissions: list[str],
     apk: Any,
+    native_analysis: dict[str, Any],
 ) -> list[dict[str, str]]:
     """
     Run all static detectors and combine their findings.
@@ -40,6 +44,10 @@ def analyze_static_findings(
 
     findings.extend(
         detect_manifest_findings(apk)
+    )
+
+    findings.extend(
+        detect_native_findings(native_analysis)
     )
 
     return findings
