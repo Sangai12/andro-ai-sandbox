@@ -3,15 +3,18 @@ AndroAI Sandbox - Backend Entry Point
 
 This module creates the FastAPI application for the AndroAI Sandbox backend.
 
-Phase 3 scope:
+Current scope:
 - Create the FastAPI app
 - Add a root endpoint
 - Add a health-check endpoint
+- Register the APK upload router
 
-No APK analysis, database logic, risk scoring, or AI logic is implemented in this phase.
+APK upload processing logic will be implemented incrementally during Phase 5.
 """
 
 from fastapi import FastAPI
+
+from backend.upload_handler import router as upload_router
 
 
 app = FastAPI(
@@ -19,6 +22,9 @@ app = FastAPI(
     description="Evidence-Based AI-Powered Android Malware Analysis Sandbox backend.",
     version="0.1.0",
 )
+
+# Register API routers
+app.include_router(upload_router)
 
 
 @app.get("/")
