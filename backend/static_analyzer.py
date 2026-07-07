@@ -13,6 +13,7 @@ Current scope:
 - Extract DEX metadata
 - Extract string indicators
 - Detect evidence-based security findings
+- Calculate overall risk score
 """
 
 from pathlib import Path
@@ -25,14 +26,15 @@ from backend.dex_analyzer import extract_dex_metadata
 from backend.native_analyzer import extract_native_libraries
 from backend.string_analyzer import extract_string_indicators
 from backend.risk_engine import analyze_static_findings
+from backend.risk_score import calculate_risk_score
 
 
 def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     """
     Extract static metadata, permissions, manifest components,
     certificate metadata, native library information,
-    DEX metadata, string indicators, and evidence-based
-    security findings from an APK file.
+    DEX metadata, string indicators, evidence-based
+    security findings, and risk score from an APK file.
     """
     apk_file = Path(apk_path)
 
@@ -60,6 +62,8 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         string_analysis=string_analysis,
         certificates=certificates,
     )
+
+    risk_analysis = calculate_risk_score(findings)
 
     return {
         "package_name": apk.get_package(),
@@ -104,6 +108,11 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
 
         "suspicious_commands": string_analysis["suspicious_commands"],
         "suspicious_command_count": string_analysis["suspicious_command_count"],
+
+        "risk_score": risk_analysis["risk_score"],
+        "risk_level": risk_analysis["risk_level"],
+        "severity_counts": risk_analysis["severity_counts"],
+        "total_findings": risk_analysis["total_findings"],
 
         "findings": findings,
         "finding_count": len(findings),
