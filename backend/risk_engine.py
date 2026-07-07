@@ -8,10 +8,10 @@ Current scope:
 - Manifest detector
 - Native library detector
 - DEX detector
+- Network detector
 
 Future:
 - Certificate detector
-- Network detector
 """
 
 from typing import Any
@@ -28,6 +28,9 @@ from backend.detectors.native_detector import (
 from backend.detectors.dex_detector import (
     detect_dex_findings,
 )
+from backend.detectors.network_detector import (
+    detect_network_findings,
+)
 
 
 def analyze_static_findings(
@@ -35,6 +38,7 @@ def analyze_static_findings(
     apk: Any,
     native_analysis: dict[str, Any],
     dex_analysis: dict[str, Any],
+    string_analysis: dict[str, Any],
 ) -> list[dict[str, str]]:
     """
     Run all static detectors and combine their findings.
@@ -56,6 +60,10 @@ def analyze_static_findings(
 
     findings.extend(
         detect_dex_findings(dex_analysis)
+    )
+
+    findings.extend(
+        detect_network_findings(string_analysis)
     )
 
     return findings
