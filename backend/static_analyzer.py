@@ -3,9 +3,10 @@ AndroAI Sandbox - Static Analyzer
 
 This module performs static APK analysis.
 
-Phase 6 scope:
+Current scope:
 - Load APK files
 - Extract basic APK metadata
+- Extract requested permissions
 """
 
 from pathlib import Path
@@ -16,13 +17,13 @@ from androguard.core.apk import APK
 
 def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     """
-    Extract basic metadata from an APK file.
+    Extract basic metadata and permissions from an APK file.
 
     Args:
         apk_path: Path to the APK file.
 
     Returns:
-        Dictionary containing APK metadata.
+        Dictionary containing APK metadata and permissions.
     """
     apk_file = Path(apk_path)
 
@@ -31,10 +32,14 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
 
     apk = APK(str(apk_file))
 
+    permissions = apk.get_permissions()
+
     return {
         "package_name": apk.get_package(),
         "version_name": apk.get_androidversion_name(),
         "version_code": apk.get_androidversion_code(),
         "min_sdk": apk.get_min_sdk_version(),
         "target_sdk": apk.get_target_sdk_version(),
+        "permissions": permissions,
+        "permission_count": len(permissions),
     }
