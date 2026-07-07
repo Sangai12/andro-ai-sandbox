@@ -2,7 +2,8 @@
 AndroAI Sandbox - Report Generator
 
 This module builds a structured analysis report from
-APK metadata, extracted evidence, findings, and risk results.
+APK metadata, extracted evidence, findings, risk results,
+and MITRE ATT&CK mappings.
 
 Phase 19 scope:
 - Build consistent report object
@@ -98,6 +99,8 @@ def build_analysis_report(
             "yara_matched_rules": analysis_data["yara_matched_rules"],
             "yara_match_count": analysis_data["yara_match_count"],
         },
+        "mitre_attack": analysis_data["mitre_attack"],
+        "mitre_attack_count": analysis_data["mitre_attack_count"],
         "findings": analysis_data["findings"],
         "finding_count": analysis_data["finding_count"],
     }

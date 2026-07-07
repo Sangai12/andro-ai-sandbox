@@ -15,6 +15,7 @@ Current scope:
 - Extract IOC indicators
 - Extract API usage indicators
 - Extract YARA scan results
+- Map findings to MITRE ATT&CK
 - Detect evidence-based security findings
 - Calculate overall risk score
 - Generate risk summary
@@ -30,6 +31,7 @@ from backend.api_usage_analyzer import extract_api_usage
 from backend.certificate_analyzer import extract_certificate_metadata
 from backend.dex_analyzer import extract_dex_metadata
 from backend.ioc_analyzer import extract_iocs
+from backend.mitre_mapper import map_findings_to_mitre
 from backend.native_analyzer import extract_native_libraries
 from backend.report_generator import build_analysis_report
 from backend.risk_engine import analyze_static_findings
@@ -42,7 +44,7 @@ from backend.yara_analyzer import scan_with_yara
 def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     """
     Extract static metadata, evidence, findings, risk score,
-    risk summary, and structured report from an APK file.
+    risk summary, MITRE mapping, and structured report from an APK file.
     """
     apk_file = Path(apk_path)
 
@@ -85,6 +87,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         risk_analysis=risk_analysis,
         findings=findings,
     )
+    mitre_mapping = map_findings_to_mitre(findings)
 
     analysis_data = {
         "package_name": apk.get_package(),
@@ -165,6 +168,9 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         "risk_summary": risk_summary,
         "severity_counts": risk_analysis["severity_counts"],
         "total_findings": risk_analysis["total_findings"],
+
+        "mitre_attack": mitre_mapping,
+        "mitre_attack_count": len(mitre_mapping),
 
         "findings": findings,
         "finding_count": len(findings),
