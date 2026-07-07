@@ -9,8 +9,6 @@ Current scope:
 - Native library detector
 - DEX detector
 - Network detector
-
-Future:
 - Certificate detector
 """
 
@@ -31,6 +29,9 @@ from backend.detectors.dex_detector import (
 from backend.detectors.network_detector import (
     detect_network_findings,
 )
+from backend.detectors.certificate_detector import (
+    detect_certificate_findings,
+)
 
 
 def analyze_static_findings(
@@ -39,6 +40,7 @@ def analyze_static_findings(
     native_analysis: dict[str, Any],
     dex_analysis: dict[str, Any],
     string_analysis: dict[str, Any],
+    certificates: list[dict[str, Any]],
 ) -> list[dict[str, str]]:
     """
     Run all static detectors and combine their findings.
@@ -64,6 +66,10 @@ def analyze_static_findings(
 
     findings.extend(
         detect_network_findings(string_analysis)
+    )
+
+    findings.extend(
+        detect_certificate_findings(certificates)
     )
 
     return findings
