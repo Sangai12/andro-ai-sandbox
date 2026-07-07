@@ -9,6 +9,7 @@ Current scope:
 - Extract requested permissions
 - Extract manifest components
 - Extract certificate metadata
+- Extract native library information
 - Detect evidence-based security findings
 """
 
@@ -18,22 +19,15 @@ from typing import Any
 from androguard.core.apk import APK
 
 from backend.certificate_analyzer import extract_certificate_metadata
+from backend.native_analyzer import extract_native_libraries
 from backend.risk_engine import analyze_static_findings
 
 
 def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     """
     Extract static metadata, permissions, manifest components,
-    certificate metadata, and evidence-based security findings
-    from an APK file.
-
-    Args:
-        apk_path: Path to the APK file.
-
-    Returns:
-        Dictionary containing APK metadata, permissions,
-        manifest components, certificate metadata,
-        and security findings.
+    certificate metadata, native library information,
+    and evidence-based security findings from an APK file.
     """
     apk_file = Path(apk_path)
 
@@ -49,6 +43,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     providers = apk.get_providers()
 
     certificates = extract_certificate_metadata(apk)
+    native_analysis = extract_native_libraries(apk)
 
     findings = analyze_static_findings(
         permissions=permissions,
@@ -79,6 +74,10 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
 
         "certificates": certificates,
         "certificate_count": len(certificates),
+
+        "native_libraries": native_analysis["native_libraries"],
+        "native_library_count": native_analysis["native_library_count"],
+        "native_architectures": native_analysis["native_architectures"],
 
         "findings": findings,
         "finding_count": len(findings),
