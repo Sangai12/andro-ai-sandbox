@@ -15,6 +15,7 @@ Current scope:
 - Detect evidence-based security findings
 - Calculate overall risk score
 - Generate risk summary
+- Build structured analysis report
 """
 
 from pathlib import Path
@@ -25,18 +26,17 @@ from androguard.core.apk import APK
 from backend.certificate_analyzer import extract_certificate_metadata
 from backend.dex_analyzer import extract_dex_metadata
 from backend.native_analyzer import extract_native_libraries
-from backend.string_analyzer import extract_string_indicators
+from backend.report_generator import build_analysis_report
 from backend.risk_engine import analyze_static_findings
 from backend.risk_score import calculate_risk_score
 from backend.risk_summary import generate_risk_summary
+from backend.string_analyzer import extract_string_indicators
 
 
 def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     """
-    Extract static metadata, permissions, manifest components,
-    certificate metadata, native library information,
-    DEX metadata, string indicators, evidence-based
-    security findings, risk score, and risk summary from an APK file.
+    Extract static metadata, evidence, findings, risk score,
+    risk summary, and structured report from an APK file.
     """
     apk_file = Path(apk_path)
 
@@ -71,7 +71,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         findings=findings,
     )
 
-    return {
+    analysis_data = {
         "package_name": apk.get_package(),
         "version_name": apk.get_androidversion_name(),
         "version_code": apk.get_androidversion_code(),
@@ -124,3 +124,5 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         "findings": findings,
         "finding_count": len(findings),
     }
+
+    return build_analysis_report(analysis_data)
