@@ -44,7 +44,10 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     receivers = apk.get_receivers()
     providers = apk.get_providers()
 
-    findings = analyze_static_findings(permissions)
+    findings = analyze_static_findings(
+        permissions=permissions,
+        apk=apk,
+    )
 
     return {
         "package_name": apk.get_package(),
