@@ -11,6 +11,7 @@ Current scope:
 - Extract certificate metadata
 - Extract native library information
 - Extract DEX metadata
+- Extract string indicators
 - Detect evidence-based security findings
 """
 
@@ -22,6 +23,7 @@ from androguard.core.apk import APK
 from backend.certificate_analyzer import extract_certificate_metadata
 from backend.dex_analyzer import extract_dex_metadata
 from backend.native_analyzer import extract_native_libraries
+from backend.string_analyzer import extract_string_indicators
 from backend.risk_engine import analyze_static_findings
 
 
@@ -29,8 +31,8 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     """
     Extract static metadata, permissions, manifest components,
     certificate metadata, native library information,
-    DEX metadata, and evidence-based security findings
-    from an APK file.
+    DEX metadata, string indicators, and evidence-based
+    security findings from an APK file.
     """
     apk_file = Path(apk_path)
 
@@ -48,6 +50,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     certificates = extract_certificate_metadata(apk)
     native_analysis = extract_native_libraries(apk)
     dex_analysis = extract_dex_metadata(apk)
+    string_analysis = extract_string_indicators(apk)
 
     findings = analyze_static_findings(
         permissions=permissions,
@@ -87,6 +90,18 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
 
         "dex_files": dex_analysis["dex_files"],
         "dex_file_count": dex_analysis["dex_file_count"],
+
+        "urls": string_analysis["urls"],
+        "url_count": string_analysis["url_count"],
+
+        "ip_addresses": string_analysis["ip_addresses"],
+        "ip_address_count": string_analysis["ip_address_count"],
+
+        "email_addresses": string_analysis["email_addresses"],
+        "email_address_count": string_analysis["email_address_count"],
+
+        "suspicious_commands": string_analysis["suspicious_commands"],
+        "suspicious_command_count": string_analysis["suspicious_command_count"],
 
         "findings": findings,
         "finding_count": len(findings),
