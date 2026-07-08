@@ -4,11 +4,6 @@ AndroAI Sandbox - Report Generator
 This module builds a structured analysis report from
 APK metadata, extracted evidence, findings, risk results,
 and MITRE ATT&CK mappings.
-
-Phase 19 scope:
-- Build consistent report object
-- Keep report formatting separate from analysis logic
-- Add report version metadata
 """
 
 from datetime import UTC, datetime
