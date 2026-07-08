@@ -9,6 +9,7 @@ Current scope:
 - Add a health-check endpoint
 - Add dynamic analysis environment status endpoint
 - Add APK installation endpoint
+- Add APK launch endpoint
 - Register the APK upload router
 - Register the report download router
 """
@@ -23,6 +24,7 @@ from backend.dynamic_runner import (
     get_first_ready_device,
     install_apk,
     is_device_ready,
+    launch_app,
 )
 from backend.report_handler import router as report_router
 from backend.upload_handler import router as upload_router
@@ -143,4 +145,30 @@ def dynamic_install(stored_filename: str) -> dict:
         "apk": str(apk_path),
         "device": device,
         "install_result": install_result,
+    }
+
+
+@app.post("/dynamic/launch/{package_name}")
+def dynamic_launch(package_name: str) -> dict:
+    """
+    Launch an installed Android application by package name.
+    """
+
+    device = get_first_ready_device()
+
+    if device is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No ready Android device or emulator found.",
+        )
+
+    launch_result = launch_app(
+        serial=device["serial"],
+        package_name=package_name,
+    )
+
+    return {
+        "package_name": package_name,
+        "device": device,
+        "launch_result": launch_result,
     }

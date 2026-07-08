@@ -3,11 +3,12 @@ AndroAI Sandbox - Dynamic Runner
 
 This module provides the foundation for Android dynamic analysis.
 
-Phase 29 and Phase 30 scope:
+Phase 29, Phase 30, and Phase 31 scope:
 - Verify ADB installation
 - Detect connected Android devices or emulators
 - Verify emulator readiness
 - Install APK files on a target device
+- Launch installed APK packages
 - Prepare for future dynamic analysis
 """
 
@@ -163,3 +164,108 @@ def get_first_ready_device() -> dict[str, Any] | None:
             }
 
     return None
+
+
+def get_launch_activity(
+    serial: str,
+    package_name: str,
+) -> dict[str, Any]:
+    """
+    Resolve the launchable activity for an installed Android package.
+    """
+
+    result = subprocess.run(
+        [
+            "adb",
+            "-s",
+            serial,
+            "shell",
+            "cmd",
+            "package",
+            "resolve-activity",
+            "--brief",
+            package_name,
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    output_lines = [
+        line.strip()
+        for line in result.stdout.splitlines()
+        if line.strip()
+    ]
+
+    launch_activity = output_lines[-1] if output_lines else ""
+
+    success = (
+        result.returncode == 0
+        and launch_activity
+        and "/" in launch_activity
+    )
+
+    return {
+        "success": success,
+        "package_name": package_name,
+        "launch_activity": launch_activity,
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+    }
+
+
+def launch_app(
+    serial: str,
+    package_name: str,
+) -> dict[str, Any]:
+    """
+    Launch an installed Android application by package name.
+    """
+
+    launch_activity_result = get_launch_activity(
+        serial=serial,
+        package_name=package_name,
+    )
+
+    if not launch_activity_result["success"]:
+        return {
+            "success": False,
+            "package_name": package_name,
+            "serial": serial,
+            "message": "Launch activity could not be resolved.",
+            "launch_activity": "",
+            "stdout": launch_activity_result["stdout"],
+            "stderr": launch_activity_result["stderr"],
+        }
+
+    launch_activity = launch_activity_result["launch_activity"]
+
+    result = subprocess.run(
+        [
+            "adb",
+            "-s",
+            serial,
+            "shell",
+            "am",
+            "start",
+            "-n",
+            launch_activity,
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    success = result.returncode == 0
+
+    return {
+        "success": success,
+        "package_name": package_name,
+        "serial": serial,
+        "message": (
+            "Application launched successfully."
+            if success
+            else "Application launch failed."
+        ),
+        "launch_activity": launch_activity,
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+    }
