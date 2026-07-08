@@ -13,6 +13,7 @@ Current scope:
 - Add runtime logcat collection endpoint
 - Add runtime logcat analysis endpoint
 - Add automated dynamic analysis endpoint
+- Add dynamic risk scoring
 - Register the APK upload router
 - Register the report download router
 """
@@ -21,6 +22,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 
+from backend.dynamic_risk_score import calculate_dynamic_risk_score
 from backend.dynamic_runner import (
     check_adb,
     clear_logcat,
@@ -232,10 +234,12 @@ def dynamic_analyze_logcat(log_filename: str) -> dict:
         )
 
     analysis_result = analyze_runtime_log(log_path)
+    dynamic_risk = calculate_dynamic_risk_score(analysis_result)
 
     return {
         "log_file": str(log_path),
         "analysis_result": analysis_result,
+        "dynamic_risk": dynamic_risk,
     }
 
 
@@ -293,11 +297,13 @@ def dynamic_analyze(
     )
 
     runtime_analysis = {}
+    dynamic_risk = {}
 
     if logcat_result.get("success"):
         runtime_analysis = analyze_runtime_log(
             logcat_result["log_path"],
         )
+        dynamic_risk = calculate_dynamic_risk_score(runtime_analysis)
 
     return {
         "apk": str(apk_path),
@@ -310,6 +316,7 @@ def dynamic_analyze(
             "wait": wait_result,
             "collect_logcat": logcat_result,
             "runtime_analysis": runtime_analysis,
+            "dynamic_risk": dynamic_risk,
         },
         "success": all(
             [
