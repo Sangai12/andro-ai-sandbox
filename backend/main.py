@@ -8,19 +8,27 @@ Current scope:
 - Add a root endpoint
 - Add a health-check endpoint
 - Add dynamic analysis environment status endpoint
+- Add APK installation endpoint
 - Register the APK upload router
 - Register the report download router
 """
 
-from fastapi import FastAPI
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
 
 from backend.dynamic_runner import (
     check_adb,
     get_connected_devices,
+    get_first_ready_device,
+    install_apk,
     is_device_ready,
 )
 from backend.report_handler import router as report_router
 from backend.upload_handler import router as upload_router
+
+
+UPLOAD_DIRECTORY = Path("uploads")
 
 
 app = FastAPI(
@@ -95,4 +103,44 @@ def dynamic_status() -> dict:
         "devices": device_status,
         "ready": any(device["ready"] for device in device_status),
         "message": "Dynamic analysis environment status checked.",
+    }
+
+
+@app.post("/dynamic/install/{stored_filename}")
+def dynamic_install(stored_filename: str) -> dict:
+    """
+    Install a previously uploaded APK on the first ready Android device.
+    """
+
+    if not stored_filename.endswith(".apk"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only APK files can be installed.",
+        )
+
+    apk_path = UPLOAD_DIRECTORY / stored_filename
+
+    if not apk_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Uploaded APK not found.",
+        )
+
+    device = get_first_ready_device()
+
+    if device is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No ready Android device or emulator found.",
+        )
+
+    install_result = install_apk(
+        apk_path=apk_path,
+        serial=device["serial"],
+    )
+
+    return {
+        "apk": str(apk_path),
+        "device": device,
+        "install_result": install_result,
     }
