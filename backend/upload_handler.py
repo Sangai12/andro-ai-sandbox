@@ -3,13 +3,14 @@ AndroAI Sandbox - Upload Module
 
 Handles APK uploads.
 
-Phase 5, Phase 6, and Phase 25 scope:
+Phase 5, Phase 6, Phase 25, and Phase 27 scope:
 - Receive APK files
 - Validate APK extension
 - Generate file hashes
 - Save uploaded APK using SHA-256 filename
 - Extract APK metadata and analysis report
 - Generate HTML analysis report
+- Generate PDF analysis report
 """
 
 from pathlib import Path
@@ -18,6 +19,7 @@ import hashlib
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from backend.html_report_generator import generate_html_report
+from backend.pdf_report_generator import generate_pdf_report
 from backend.static_analyzer import extract_apk_metadata
 
 router = APIRouter(
@@ -36,7 +38,7 @@ REPORT_DIRECTORY.mkdir(exist_ok=True)
 async def upload_apk(file: UploadFile = File(...)):
     """
     Upload an APK file, generate evidence metadata, extract APK metadata,
-    and generate an HTML report.
+    and generate HTML and PDF reports.
     """
 
     if not file.filename.lower().endswith(".apk"):
@@ -66,6 +68,13 @@ async def upload_apk(file: UploadFile = File(...)):
     with open(html_report_path, "w", encoding="utf-8") as report_file:
         report_file.write(html_report)
 
+    pdf_report_filename = f"{sha256_hash}.pdf"
+    pdf_report_path = REPORT_DIRECTORY / pdf_report_filename
+    generate_pdf_report(
+        report=metadata,
+        output_path=pdf_report_path,
+    )
+
     return {
         "original_filename": file.filename,
         "stored_filename": stored_filename,
@@ -75,6 +84,7 @@ async def upload_apk(file: UploadFile = File(...)):
         "sha256": sha256_hash,
         "saved_to": str(destination),
         "html_report": str(html_report_path),
+        "pdf_report": str(pdf_report_path),
         "status": "uploaded",
         "metadata": metadata,
     }
