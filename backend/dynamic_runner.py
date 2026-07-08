@@ -3,17 +3,21 @@ AndroAI Sandbox - Dynamic Runner
 
 This module provides the foundation for Android dynamic analysis.
 
-Phase 29, Phase 30, and Phase 31 scope:
+Phase 29, Phase 30, Phase 31, Phase 32, and Phase 34 scope:
 - Verify ADB installation
 - Detect connected Android devices or emulators
 - Verify emulator readiness
 - Install APK files on a target device
 - Launch installed APK packages
-- Prepare for future dynamic analysis
+- Collect runtime logcat logs
+- Wait during runtime observation
+- Prepare for automated dynamic analysis
 """
 
+from datetime import UTC, datetime
 from pathlib import Path
 import subprocess
+import time
 from typing import Any
 
 
@@ -268,4 +272,105 @@ def launch_app(
         "launch_activity": launch_activity,
         "stdout": result.stdout.strip(),
         "stderr": result.stderr.strip(),
+    }
+
+
+def clear_logcat(serial: str) -> dict[str, Any]:
+    """
+    Clear the device logcat buffer.
+    """
+
+    result = subprocess.run(
+        [
+            "adb",
+            "-s",
+            serial,
+            "logcat",
+            "-c",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    success = result.returncode == 0
+
+    return {
+        "success": success,
+        "serial": serial,
+        "message": (
+            "Logcat buffer cleared."
+            if success
+            else "Failed to clear logcat buffer."
+        ),
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+    }
+
+
+def collect_logcat(
+    serial: str,
+    package_name: str,
+    output_directory: str | Path = "logs",
+    line_count: int = 500,
+) -> dict[str, Any]:
+    """
+    Collect recent logcat output and save it to a log file.
+    """
+
+    log_directory = Path(output_directory)
+    log_directory.mkdir(exist_ok=True)
+
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    safe_package_name = package_name.replace(".", "_")
+    log_filename = f"{safe_package_name}_{timestamp}.log"
+    log_path = log_directory / log_filename
+
+    result = subprocess.run(
+        [
+            "adb",
+            "-s",
+            serial,
+            "logcat",
+            "-d",
+            "-t",
+            str(line_count),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    success = result.returncode == 0
+
+    if success:
+        log_path.write_text(
+            result.stdout,
+            encoding="utf-8",
+        )
+
+    return {
+        "success": success,
+        "serial": serial,
+        "package_name": package_name,
+        "log_path": str(log_path) if success else "",
+        "line_count_requested": line_count,
+        "message": (
+            "Logcat collected successfully."
+            if success
+            else "Failed to collect logcat."
+        ),
+        "stderr": result.stderr.strip(),
+    }
+
+
+def wait_for_runtime(seconds: int = 10) -> dict[str, Any]:
+    """
+    Wait while the launched application runs.
+    """
+
+    time.sleep(seconds)
+
+    return {
+        "success": True,
+        "wait_seconds": seconds,
+        "message": f"Runtime observation waited for {seconds} seconds.",
     }

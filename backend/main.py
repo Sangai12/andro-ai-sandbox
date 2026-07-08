@@ -10,6 +10,9 @@ Current scope:
 - Add dynamic analysis environment status endpoint
 - Add APK installation endpoint
 - Add APK launch endpoint
+- Add runtime logcat collection endpoint
+- Add runtime logcat analysis endpoint
+- Add automated dynamic analysis endpoint
 - Register the APK upload router
 - Register the report download router
 """
@@ -20,17 +23,22 @@ from fastapi import FastAPI, HTTPException
 
 from backend.dynamic_runner import (
     check_adb,
+    clear_logcat,
+    collect_logcat,
     get_connected_devices,
     get_first_ready_device,
     install_apk,
     is_device_ready,
     launch_app,
+    wait_for_runtime,
 )
 from backend.report_handler import router as report_router
+from backend.runtime_log_analyzer import analyze_runtime_log
 from backend.upload_handler import router as upload_router
 
 
 UPLOAD_DIRECTORY = Path("uploads")
+LOG_DIRECTORY = Path("logs")
 
 
 app = FastAPI(
@@ -39,24 +47,17 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Register API routers
 app.include_router(upload_router)
 app.include_router(report_router)
 
 
 @app.get("/")
 def root() -> dict[str, str]:
-    """
-    Root endpoint used to verify that the backend server is running.
-    """
     return {"message": "AndroAI Sandbox backend is running"}
 
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
-    """
-    Health-check endpoint used for testing and monitoring.
-    """
     return {
         "status": "ok",
         "service": "androai-backend",
@@ -65,10 +66,6 @@ def health_check() -> dict[str, str]:
 
 @app.get("/dynamic/status")
 def dynamic_status() -> dict:
-    """
-    Return dynamic analysis environment status.
-    """
-
     adb_available = check_adb()
 
     if not adb_available:
@@ -80,13 +77,11 @@ def dynamic_status() -> dict:
         }
 
     devices = get_connected_devices()
-
     device_status = []
 
     for device in devices:
         serial = device["serial"]
         state = device["state"]
-
         ready = False
 
         if state == "device":
@@ -110,10 +105,6 @@ def dynamic_status() -> dict:
 
 @app.post("/dynamic/install/{stored_filename}")
 def dynamic_install(stored_filename: str) -> dict:
-    """
-    Install a previously uploaded APK on the first ready Android device.
-    """
-
     if not stored_filename.endswith(".apk"):
         raise HTTPException(
             status_code=400,
@@ -150,10 +141,6 @@ def dynamic_install(stored_filename: str) -> dict:
 
 @app.post("/dynamic/launch/{package_name}")
 def dynamic_launch(package_name: str) -> dict:
-    """
-    Launch an installed Android application by package name.
-    """
-
     device = get_first_ready_device()
 
     if device is None:
@@ -171,4 +158,165 @@ def dynamic_launch(package_name: str) -> dict:
         "package_name": package_name,
         "device": device,
         "launch_result": launch_result,
+    }
+
+
+@app.post("/dynamic/logcat/{package_name}")
+def dynamic_logcat(package_name: str) -> dict:
+    """
+    Collect recent runtime logcat output from the first ready device.
+    """
+
+    device = get_first_ready_device()
+
+    if device is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No ready Android device or emulator found.",
+        )
+
+    logcat_result = collect_logcat(
+        serial=device["serial"],
+        package_name=package_name,
+    )
+
+    return {
+        "package_name": package_name,
+        "device": device,
+        "logcat_result": logcat_result,
+    }
+
+
+@app.post("/dynamic/logcat/clear")
+def dynamic_clear_logcat() -> dict:
+    """
+    Clear logcat buffer on the first ready device.
+    """
+
+    device = get_first_ready_device()
+
+    if device is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No ready Android device or emulator found.",
+        )
+
+    clear_result = clear_logcat(
+        serial=device["serial"],
+    )
+
+    return {
+        "device": device,
+        "clear_result": clear_result,
+    }
+
+
+@app.post("/dynamic/logcat/analyze/{log_filename}")
+def dynamic_analyze_logcat(log_filename: str) -> dict:
+    """
+    Analyze a saved runtime logcat file.
+    """
+
+    if not log_filename.endswith(".log"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only .log files can be analyzed.",
+        )
+
+    log_path = LOG_DIRECTORY / log_filename
+
+    if not log_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Runtime log file not found.",
+        )
+
+    analysis_result = analyze_runtime_log(log_path)
+
+    return {
+        "log_file": str(log_path),
+        "analysis_result": analysis_result,
+    }
+
+
+@app.post("/dynamic/analyze/{stored_filename}/{package_name}")
+def dynamic_analyze(
+    stored_filename: str,
+    package_name: str,
+    wait_seconds: int = 10,
+) -> dict:
+    """
+    Run the automated dynamic analysis workflow.
+    """
+
+    if not stored_filename.endswith(".apk"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only APK files can be analyzed dynamically.",
+        )
+
+    apk_path = UPLOAD_DIRECTORY / stored_filename
+
+    if not apk_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Uploaded APK not found.",
+        )
+
+    device = get_first_ready_device()
+
+    if device is None:
+        raise HTTPException(
+            status_code=503,
+            detail="No ready Android device or emulator found.",
+        )
+
+    clear_result = clear_logcat(
+        serial=device["serial"],
+    )
+
+    install_result = install_apk(
+        apk_path=apk_path,
+        serial=device["serial"],
+    )
+
+    launch_result = launch_app(
+        serial=device["serial"],
+        package_name=package_name,
+    )
+
+    wait_result = wait_for_runtime(wait_seconds)
+
+    logcat_result = collect_logcat(
+        serial=device["serial"],
+        package_name=package_name,
+    )
+
+    runtime_analysis = {}
+
+    if logcat_result.get("success"):
+        runtime_analysis = analyze_runtime_log(
+            logcat_result["log_path"],
+        )
+
+    return {
+        "apk": str(apk_path),
+        "package_name": package_name,
+        "device": device,
+        "workflow": {
+            "clear_logcat": clear_result,
+            "install": install_result,
+            "launch": launch_result,
+            "wait": wait_result,
+            "collect_logcat": logcat_result,
+            "runtime_analysis": runtime_analysis,
+        },
+        "success": all(
+            [
+                clear_result.get("success"),
+                install_result.get("success"),
+                launch_result.get("success"),
+                logcat_result.get("success"),
+            ]
+        ),
     }
