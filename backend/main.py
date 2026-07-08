@@ -8,12 +8,14 @@ Current scope:
 - Add a root endpoint
 - Add a health-check endpoint
 - Register the APK upload router
+- Register the report download router
 
 APK upload processing logic will be implemented incrementally during Phase 5.
 """
 
 from fastapi import FastAPI
 
+from backend.report_handler import router as report_router
 from backend.upload_handler import router as upload_router
 
 
@@ -25,6 +27,7 @@ app = FastAPI(
 
 # Register API routers
 app.include_router(upload_router)
+app.include_router(report_router)
 
 
 @app.get("/")

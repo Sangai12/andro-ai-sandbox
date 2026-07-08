@@ -3,12 +3,13 @@ AndroAI Sandbox - Upload Module
 
 Handles APK uploads.
 
-Phase 5 and Phase 6 scope:
+Phase 5, Phase 6, and Phase 25 scope:
 - Receive APK files
 - Validate APK extension
 - Generate file hashes
 - Save uploaded APK using SHA-256 filename
-- Extract basic APK metadata
+- Extract APK metadata and analysis report
+- Generate HTML analysis report
 """
 
 from pathlib import Path
@@ -16,6 +17,7 @@ import hashlib
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
+from backend.html_report_generator import generate_html_report
 from backend.static_analyzer import extract_apk_metadata
 
 router = APIRouter(
@@ -26,11 +28,15 @@ router = APIRouter(
 UPLOAD_DIRECTORY = Path("uploads")
 UPLOAD_DIRECTORY.mkdir(exist_ok=True)
 
+REPORT_DIRECTORY = Path("reports")
+REPORT_DIRECTORY.mkdir(exist_ok=True)
+
 
 @router.post("/")
 async def upload_apk(file: UploadFile = File(...)):
     """
-    Upload an APK file, generate evidence metadata, and extract APK metadata.
+    Upload an APK file, generate evidence metadata, extract APK metadata,
+    and generate an HTML report.
     """
 
     if not file.filename.lower().endswith(".apk"):
@@ -53,6 +59,13 @@ async def upload_apk(file: UploadFile = File(...)):
 
     metadata = extract_apk_metadata(destination)
 
+    html_report = generate_html_report(metadata)
+    html_report_filename = f"{sha256_hash}.html"
+    html_report_path = REPORT_DIRECTORY / html_report_filename
+
+    with open(html_report_path, "w", encoding="utf-8") as report_file:
+        report_file.write(html_report)
+
     return {
         "original_filename": file.filename,
         "stored_filename": stored_filename,
@@ -61,6 +74,7 @@ async def upload_apk(file: UploadFile = File(...)):
         "sha1": sha1_hash,
         "sha256": sha256_hash,
         "saved_to": str(destination),
+        "html_report": str(html_report_path),
         "status": "uploaded",
         "metadata": metadata,
     }
