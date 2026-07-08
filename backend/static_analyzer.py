@@ -16,6 +16,7 @@ Current scope:
 - Extract API usage indicators
 - Extract YARA scan results
 - Map findings to MITRE ATT&CK
+- Assign confidence to findings
 - Detect evidence-based security findings
 - Calculate overall risk score
 - Generate risk summary
@@ -29,6 +30,7 @@ from androguard.core.apk import APK
 
 from backend.api_usage_analyzer import extract_api_usage
 from backend.certificate_analyzer import extract_certificate_metadata
+from backend.confidence_engine import assign_confidence_to_findings
 from backend.dex_analyzer import extract_dex_metadata
 from backend.ioc_analyzer import extract_iocs
 from backend.mitre_mapper import map_findings_to_mitre
@@ -44,7 +46,8 @@ from backend.yara_analyzer import scan_with_yara
 def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     """
     Extract static metadata, evidence, findings, risk score,
-    risk summary, MITRE mapping, and structured report from an APK file.
+    risk summary, MITRE mapping, confidence, and structured
+    report from an APK file.
     """
     apk_file = Path(apk_path)
 
@@ -82,12 +85,14 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         api_usage_analysis=api_usage_analysis,
     )
 
+    findings_with_confidence = assign_confidence_to_findings(findings)
+
     risk_analysis = calculate_risk_score(findings)
     risk_summary = generate_risk_summary(
         risk_analysis=risk_analysis,
         findings=findings,
     )
-    mitre_mapping = map_findings_to_mitre(findings)
+    mitre_mapping = map_findings_to_mitre(findings_with_confidence)
 
     analysis_data = {
         "package_name": apk.get_package(),
@@ -172,8 +177,8 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         "mitre_attack": mitre_mapping,
         "mitre_attack_count": len(mitre_mapping),
 
-        "findings": findings,
-        "finding_count": len(findings),
+        "findings": findings_with_confidence,
+        "finding_count": len(findings_with_confidence),
     }
 
     return build_analysis_report(analysis_data)
