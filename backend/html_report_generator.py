@@ -19,6 +19,17 @@ def _badge(value: str, badge_type: str) -> str:
     return f'<span class="badge {badge_type}-{safe_value}">{safe_value}</span>'
 
 
+def _list_items(items: list[str]) -> str:
+    """
+    Convert a list of strings into escaped HTML list items.
+    """
+
+    return "".join(
+        f"<li>{escape(str(item))}</li>"
+        for item in items
+    )
+
+
 def generate_html_report(
     report: dict[str, Any],
 ) -> str:
@@ -32,6 +43,7 @@ def generate_html_report(
     evidence = report.get("evidence", {})
     findings = report.get("findings", [])
     mitre_attack = report.get("mitre_attack", [])
+    ai_summary = report.get("ai_summary", {})
     severity_counts = summary.get("severity_counts", {})
 
     finding_rows = ""
@@ -137,6 +149,11 @@ def generate_html_report(
             padding-bottom: 10px;
         }}
 
+        h3 {{
+            color: #374151;
+            margin-bottom: 8px;
+        }}
+
         table {{
             border-collapse: collapse;
             width: 100%;
@@ -158,6 +175,10 @@ def generate_html_report(
 
         tr:hover {{
             background: #f9fafb;
+        }}
+
+        ul, ol {{
+            line-height: 1.7;
         }}
 
         .badge {{
@@ -289,6 +310,44 @@ def generate_html_report(
                 <strong>High:</strong> {escape(str(severity_counts.get("high", 0)))}
                 &nbsp; | &nbsp;
                 <strong>Critical:</strong> {escape(str(severity_counts.get("critical", 0)))}
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>AI Analyst Summary</h2>
+
+            <h3>Executive Summary</h3>
+            <p class="summary-text">
+                {escape(str(ai_summary.get("executive_summary", "")))}
+            </p>
+
+            <h3>Analyst Assessment</h3>
+            <p class="summary-text">
+                {escape(str(ai_summary.get("analyst_assessment", "")))}
+            </p>
+
+            <h3>Key Evidence</h3>
+            <ul>
+                {_list_items(ai_summary.get("key_evidence", []))}
+            </ul>
+
+            <h3>Observed Behaviors</h3>
+            <ul>
+                {_list_items(ai_summary.get("key_behaviors", []))}
+            </ul>
+
+            <h3>MITRE ATT&CK Summary</h3>
+            <ul>
+                {_list_items(ai_summary.get("mitre_summary", []))}
+            </ul>
+
+            <h3>Recommended Next Steps</h3>
+            <ol>
+                {_list_items(ai_summary.get("recommended_next_steps", []))}
+            </ol>
+
+            <p class="muted">
+                {escape(str(ai_summary.get("disclaimer", "")))}
             </p>
         </div>
 

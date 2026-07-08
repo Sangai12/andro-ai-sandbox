@@ -4,10 +4,11 @@ AndroAI Sandbox - PDF Report Generator
 This module converts structured analysis reports into
 professional PDF analyst reports.
 
-Phase 27 scope:
+Phase 27 and Phase 28 scope:
 - Generate PDF report
 - Include APK summary
 - Include risk summary
+- Include AI analyst summary
 - Include evidence overview
 - Include findings table
 - Include MITRE ATT&CK mapping table
@@ -55,6 +56,7 @@ def generate_pdf_report(
     evidence = report.get("evidence", {})
     findings = report.get("findings", [])
     mitre_attack = report.get("mitre_attack", [])
+    ai_summary = report.get("ai_summary", {})
 
     story.append(Paragraph("AndroAI Sandbox Analysis Report", styles["Title"]))
     story.append(Spacer(1, 12))
@@ -82,6 +84,70 @@ def generate_pdf_report(
         Paragraph(
             str(summary.get("risk_summary", "")),
             styles["BodyText"],
+        )
+    )
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("AI Analyst Summary", styles["Heading2"]))
+
+    story.append(Paragraph("Executive Summary", styles["Heading3"]))
+    story.append(
+        Paragraph(
+            str(ai_summary.get("executive_summary", "")),
+            styles["BodyText"],
+        )
+    )
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph("Analyst Assessment", styles["Heading3"]))
+    story.append(
+        Paragraph(
+            str(ai_summary.get("analyst_assessment", "")),
+            styles["BodyText"],
+        )
+    )
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph("Key Evidence", styles["Heading3"]))
+    story.extend(
+        _build_bullet_paragraphs(
+            ai_summary.get("key_evidence", []),
+            styles,
+        )
+    )
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph("Observed Behaviors", styles["Heading3"]))
+    story.extend(
+        _build_bullet_paragraphs(
+            ai_summary.get("key_behaviors", []),
+            styles,
+        )
+    )
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph("MITRE ATT&CK Summary", styles["Heading3"]))
+    story.extend(
+        _build_bullet_paragraphs(
+            ai_summary.get("mitre_summary", []),
+            styles,
+        )
+    )
+    story.append(Spacer(1, 6))
+
+    story.append(Paragraph("Recommended Next Steps", styles["Heading3"]))
+    story.extend(
+        _build_numbered_paragraphs(
+            ai_summary.get("recommended_next_steps", []),
+            styles,
+        )
+    )
+    story.append(Spacer(1, 6))
+
+    story.append(
+        Paragraph(
+            str(ai_summary.get("disclaimer", "")),
+            styles["Italic"],
         )
     )
     story.append(Spacer(1, 12))
@@ -142,6 +208,34 @@ def generate_pdf_report(
     doc.build(story)
 
     return str(output_file)
+
+
+def _build_bullet_paragraphs(
+    items: list[str],
+    styles: Any,
+) -> list[Paragraph]:
+    """
+    Build bullet-style paragraphs.
+    """
+
+    return [
+        Paragraph(f"• {item}", styles["BodyText"])
+        for item in items
+    ]
+
+
+def _build_numbered_paragraphs(
+    items: list[str],
+    styles: Any,
+) -> list[Paragraph]:
+    """
+    Build numbered paragraphs.
+    """
+
+    return [
+        Paragraph(f"{index}. {item}", styles["BodyText"])
+        for index, item in enumerate(items, start=1)
+    ]
 
 
 def _build_key_value_table(

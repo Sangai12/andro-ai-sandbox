@@ -17,6 +17,7 @@ Current scope:
 - Extract YARA scan results
 - Map findings to MITRE ATT&CK
 - Assign confidence to findings
+- Generate AI-style analyst summary
 - Detect evidence-based security findings
 - Calculate overall risk score
 - Generate risk summary
@@ -28,6 +29,7 @@ from typing import Any
 
 from androguard.core.apk import APK
 
+from backend.ai_report_generator import generate_ai_summary
 from backend.api_usage_analyzer import extract_api_usage
 from backend.certificate_analyzer import extract_certificate_metadata
 from backend.confidence_engine import assign_confidence_to_findings
@@ -46,8 +48,8 @@ from backend.yara_analyzer import scan_with_yara
 def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
     """
     Extract static metadata, evidence, findings, risk score,
-    risk summary, MITRE mapping, confidence, and structured
-    report from an APK file.
+    risk summary, MITRE mapping, confidence, AI-style analyst
+    summary, and structured report from an APK file.
     """
     apk_file = Path(apk_path)
 
@@ -181,4 +183,7 @@ def extract_apk_metadata(apk_path: str | Path) -> dict[str, Any]:
         "finding_count": len(findings_with_confidence),
     }
 
-    return build_analysis_report(analysis_data)
+    structured_report = build_analysis_report(analysis_data)
+    structured_report["ai_summary"] = generate_ai_summary(structured_report)
+
+    return structured_report
