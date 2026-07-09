@@ -1,10 +1,10 @@
 """
 AndroAI Sandbox - IOC Extractor
 
-This module extracts Indicators of Compromise (IOCs) from
-static and dynamic analysis evidence.
+This module extracts, filters, and classifies Indicators of Compromise
+from static and dynamic analysis evidence.
 
-Phase 42 scope:
+Phase 42 and Phase 43 scope:
 - Extract URLs
 - Extract domains
 - Extract IP addresses
@@ -14,9 +14,34 @@ Phase 42 scope:
 - Extract permissions
 - Extract native libraries
 - Extract certificate indicators
+- Filter obvious placeholder/local artifacts
+- Classify IOCs for analyst use
 """
 
 from typing import Any
+
+
+PLACEHOLDER_VALUES = {
+    "example.com",
+    "foo@bar.com",
+    "your.email@example.org",
+    "localhost",
+    "localhost:",
+    "127.0.0.1",
+    "0.0.0.0",
+    "10.0.0.1",
+    "192.168.0.1",
+    "%s",
+    "app.",
+    "app.%s",
+}
+
+
+NOISY_DOMAIN_PREFIXES = (
+    "www.w3.org",
+    "schemas.android.com",
+    "ns.adobe.com",
+)
 
 
 def extract_iocs_from_report(
@@ -29,10 +54,12 @@ def extract_iocs_from_report(
 
     evidence = static_analysis.get("evidence", {})
 
-    urls = _unique_list(evidence.get("urls", []))
-    domains = _unique_list(evidence.get("domains", []))
-    ip_addresses = _unique_list(evidence.get("ip_addresses", []))
-    email_addresses = _unique_list(evidence.get("email_addresses", []))
+    urls = _filter_noise(_unique_list(evidence.get("urls", [])))
+    domains = _filter_noise(_unique_list(evidence.get("domains", [])))
+    ip_addresses = _filter_noise(_unique_list(evidence.get("ip_addresses", [])))
+    email_addresses = _filter_noise(
+        _unique_list(evidence.get("email_addresses", []))
+    )
 
     onion_links = _unique_list(evidence.get("onion_links", []))
     telegram_links = _unique_list(evidence.get("telegram_links", []))
@@ -61,6 +88,18 @@ def extract_iocs_from_report(
 
     dynamic_security_indicators = _unique_list(
         runtime_analysis.get("security_indicators", []),
+    )
+
+    classified_iocs = _classify_iocs(
+        urls=urls,
+        domains=domains,
+        ip_addresses=ip_addresses,
+        email_addresses=email_addresses,
+        permissions=permissions,
+        native_libraries=native_libraries,
+        certificate_indicators=certificate_indicators,
+        dynamic_network_indicators=dynamic_network_indicators,
+        dynamic_security_indicators=dynamic_security_indicators,
     )
 
     return {
@@ -104,6 +143,7 @@ def extract_iocs_from_report(
         "dynamic_security_indicator_count": len(
             dynamic_security_indicators,
         ),
+        "classified_iocs": classified_iocs,
         "ioc_summary": {
             "total_network_iocs": (
                 len(urls)
@@ -130,6 +170,7 @@ def extract_iocs_from_report(
                 + len(cloud_storage_links)
                 + len(crypto_wallets)
             ),
+            "classified_ioc_count": len(classified_iocs),
         },
     }
 
@@ -146,6 +187,39 @@ def _unique_list(values: list[Any]) -> list[str]:
     }
 
     return sorted(unique_values)
+
+
+def _filter_noise(values: list[str]) -> list[str]:
+    """
+    Remove obvious local, placeholder, and documentation artifacts.
+    """
+
+    filtered_values = []
+
+    for value in values:
+        lowered_value = value.lower().strip()
+
+        if lowered_value in PLACEHOLDER_VALUES:
+            continue
+
+        if any(
+            lowered_value.startswith(prefix)
+            for prefix in NOISY_DOMAIN_PREFIXES
+        ):
+            continue
+
+        if "example." in lowered_value:
+            continue
+
+        if "localhost" in lowered_value:
+            continue
+
+        if "127.0.0.1" in lowered_value:
+            continue
+
+        filtered_values.append(value)
+
+    return filtered_values
 
 
 def _extract_certificate_indicators(
@@ -169,3 +243,113 @@ def _extract_certificate_indicators(
         )
 
     return indicators
+
+
+def _classify_iocs(
+    urls: list[str],
+    domains: list[str],
+    ip_addresses: list[str],
+    email_addresses: list[str],
+    permissions: list[str],
+    native_libraries: list[str],
+    certificate_indicators: list[dict[str, Any]],
+    dynamic_network_indicators: list[str],
+    dynamic_security_indicators: list[str],
+) -> list[dict[str, Any]]:
+    """
+    Build classified IOC records.
+    """
+
+    classified_iocs = []
+
+    for url in urls:
+        classified_iocs.append(
+            {
+                "type": "url",
+                "category": "network",
+                "value": url,
+                "source": "static",
+            }
+        )
+
+    for domain in domains:
+        classified_iocs.append(
+            {
+                "type": "domain",
+                "category": "network",
+                "value": domain,
+                "source": "static",
+            }
+        )
+
+    for ip_address in ip_addresses:
+        classified_iocs.append(
+            {
+                "type": "ip_address",
+                "category": "network",
+                "value": ip_address,
+                "source": "static",
+            }
+        )
+
+    for email_address in email_addresses:
+        classified_iocs.append(
+            {
+                "type": "email_address",
+                "category": "identity",
+                "value": email_address,
+                "source": "static",
+            }
+        )
+
+    for permission in permissions:
+        classified_iocs.append(
+            {
+                "type": "permission",
+                "category": "platform",
+                "value": permission,
+                "source": "static",
+            }
+        )
+
+    for native_library in native_libraries:
+        classified_iocs.append(
+            {
+                "type": "native_library",
+                "category": "platform",
+                "value": native_library,
+                "source": "static",
+            }
+        )
+
+    for certificate in certificate_indicators:
+        classified_iocs.append(
+            {
+                "type": "certificate",
+                "category": "certificate",
+                "value": certificate,
+                "source": "static",
+            }
+        )
+
+    for runtime_network in dynamic_network_indicators:
+        classified_iocs.append(
+            {
+                "type": "runtime_network_log",
+                "category": "runtime",
+                "value": runtime_network,
+                "source": "dynamic",
+            }
+        )
+
+    for runtime_security in dynamic_security_indicators:
+        classified_iocs.append(
+            {
+                "type": "runtime_security_log",
+                "category": "runtime",
+                "value": runtime_security,
+                "source": "dynamic",
+            }
+        )
+
+    return classified_iocs
