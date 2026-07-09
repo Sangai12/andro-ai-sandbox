@@ -3,12 +3,13 @@ AndroAI Sandbox - Final Report Generator
 
 This module builds and saves a unified final analysis report.
 
-Phase 38, Phase 41, and Phase 42 scope:
+Phase 38, Phase 41, Phase 42, and Phase 44 scope:
 - Combine static summary
 - Combine dynamic behavior analysis
 - Combine dynamic risk score
 - Combine overall risk assessment
 - Generate IOC summary
+- Generate dynamic MITRE ATT&CK mapping
 - Generate final AI-style analyst report
 - Save final report as JSON evidence
 """
@@ -18,6 +19,7 @@ from pathlib import Path
 import json
 from typing import Any
 
+from backend.dynamic_mitre_mapper import map_dynamic_behavior_to_mitre
 from backend.final_ai_report_generator import generate_final_ai_report
 from backend.ioc_extractor import extract_iocs_from_report
 
@@ -45,6 +47,10 @@ def build_final_analysis_report(
 
     iocs = extract_iocs_from_report(
         static_analysis=static_analysis,
+        runtime_analysis=runtime_analysis,
+    )
+
+    dynamic_mitre_attack = map_dynamic_behavior_to_mitre(
         runtime_analysis=runtime_analysis,
     )
 
@@ -94,6 +100,8 @@ def build_final_analysis_report(
             "error_count": runtime_analysis.get("error_count", 0),
             "log_path": runtime_analysis.get("log_path", ""),
         },
+        "dynamic_mitre_attack": dynamic_mitre_attack,
+        "dynamic_mitre_attack_count": len(dynamic_mitre_attack),
         "iocs": iocs,
         "dynamic_risk": dynamic_risk,
         "combined_risk": combined_risk,
