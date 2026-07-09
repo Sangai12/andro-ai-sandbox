@@ -14,6 +14,7 @@ Current scope:
 - Add runtime logcat analysis endpoint
 - Add automated dynamic analysis endpoint
 - Add dynamic risk scoring
+- Add combined static and dynamic risk scoring
 - Register the APK upload router
 - Register the report download router
 """
@@ -22,6 +23,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 
+from backend.combined_risk_engine import calculate_combined_risk
 from backend.dynamic_risk_score import calculate_dynamic_risk_score
 from backend.dynamic_runner import (
     check_adb,
@@ -36,6 +38,7 @@ from backend.dynamic_runner import (
 )
 from backend.report_handler import router as report_router
 from backend.runtime_log_analyzer import analyze_runtime_log
+from backend.static_analyzer import extract_apk_metadata
 from backend.upload_handler import router as upload_router
 
 
@@ -267,6 +270,8 @@ def dynamic_analyze(
             detail="Uploaded APK not found.",
         )
 
+    static_analysis = extract_apk_metadata(apk_path)
+
     device = get_first_ready_device()
 
     if device is None:
@@ -298,17 +303,26 @@ def dynamic_analyze(
 
     runtime_analysis = {}
     dynamic_risk = {}
+    combined_risk = {}
 
     if logcat_result.get("success"):
         runtime_analysis = analyze_runtime_log(
             logcat_result["log_path"],
         )
         dynamic_risk = calculate_dynamic_risk_score(runtime_analysis)
+        combined_risk = calculate_combined_risk(
+            static_analysis=static_analysis,
+            dynamic_risk=dynamic_risk,
+        )
 
     return {
         "apk": str(apk_path),
         "package_name": package_name,
         "device": device,
+        "static_analysis": {
+            "summary": static_analysis.get("summary", {}),
+            "finding_count": static_analysis.get("finding_count", 0),
+        },
         "workflow": {
             "clear_logcat": clear_result,
             "install": install_result,
@@ -317,6 +331,7 @@ def dynamic_analyze(
             "collect_logcat": logcat_result,
             "runtime_analysis": runtime_analysis,
             "dynamic_risk": dynamic_risk,
+            "combined_risk": combined_risk,
         },
         "success": all(
             [
