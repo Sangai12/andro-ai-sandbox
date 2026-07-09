@@ -3,13 +3,15 @@ AndroAI Sandbox - Final Report Generator
 
 This module builds and saves a unified final analysis report.
 
-Phase 38, Phase 41, Phase 42, and Phase 44 scope:
+Phase 38, Phase 41, Phase 42, Phase 44, and Phase 47 scope:
 - Combine static summary
 - Combine dynamic behavior analysis
+- Combine behavior snapshot analysis
 - Combine dynamic risk score
 - Combine overall risk assessment
 - Generate IOC summary
 - Generate dynamic MITRE ATT&CK mapping
+- Generate evidence correlation summary
 - Generate final AI-style analyst report
 - Save final report as JSON evidence
 """
@@ -20,6 +22,7 @@ import json
 from typing import Any
 
 from backend.dynamic_mitre_mapper import map_dynamic_behavior_to_mitre
+from backend.evidence_correlator import correlate_evidence
 from backend.final_ai_report_generator import generate_final_ai_report
 from backend.ioc_extractor import extract_iocs_from_report
 
@@ -29,6 +32,7 @@ def build_final_analysis_report(
     package_name: str,
     static_analysis: dict[str, Any],
     runtime_analysis: dict[str, Any],
+    behavior_analysis: dict[str, Any],
     dynamic_risk: dict[str, Any],
     combined_risk: dict[str, Any],
     output_directory: str | Path = "reports",
@@ -52,6 +56,12 @@ def build_final_analysis_report(
 
     dynamic_mitre_attack = map_dynamic_behavior_to_mitre(
         runtime_analysis=runtime_analysis,
+    )
+
+    evidence_correlation = correlate_evidence(
+        static_analysis=static_analysis,
+        runtime_analysis=runtime_analysis,
+        behavior_analysis=behavior_analysis,
     )
 
     final_report = {
@@ -100,8 +110,10 @@ def build_final_analysis_report(
             "error_count": runtime_analysis.get("error_count", 0),
             "log_path": runtime_analysis.get("log_path", ""),
         },
+        "behavior_analysis": behavior_analysis,
         "dynamic_mitre_attack": dynamic_mitre_attack,
         "dynamic_mitre_attack_count": len(dynamic_mitre_attack),
+        "evidence_correlation": evidence_correlation,
         "iocs": iocs,
         "dynamic_risk": dynamic_risk,
         "combined_risk": combined_risk,

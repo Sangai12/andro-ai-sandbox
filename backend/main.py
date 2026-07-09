@@ -338,6 +338,7 @@ def dynamic_analyze(
             package_name=package_name,
             static_analysis=static_analysis,
             runtime_analysis=runtime_analysis,
+            behavior_analysis=behavior_analysis,
             dynamic_risk=dynamic_risk,
             combined_risk=combined_risk,
         )
