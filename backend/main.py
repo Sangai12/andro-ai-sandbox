@@ -14,6 +14,7 @@ Current scope:
 - Add runtime logcat analysis endpoint
 - Add automated dynamic analysis endpoint
 - Add dynamic behavior snapshot collection
+- Add dynamic behavior snapshot analysis
 - Add dynamic risk scoring
 - Add combined static and dynamic risk scoring
 - Add final JSON report generation
@@ -25,6 +26,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 
+from backend.behavior_analyzer import analyze_behavior_snapshot
 from backend.behavior_monitor import collect_behavior_snapshot
 from backend.combined_risk_engine import calculate_combined_risk
 from backend.dynamic_risk_score import calculate_dynamic_risk_score
@@ -305,6 +307,10 @@ def dynamic_analyze(
         package_name=package_name,
     )
 
+    behavior_analysis = analyze_behavior_snapshot(
+        behavior_snapshot,
+    )
+
     logcat_result = collect_logcat(
         serial=device["serial"],
         package_name=package_name,
@@ -350,6 +356,7 @@ def dynamic_analyze(
             "launch": launch_result,
             "wait": wait_result,
             "behavior_snapshot": behavior_snapshot,
+            "behavior_analysis": behavior_analysis,
             "collect_logcat": logcat_result,
             "runtime_analysis": runtime_analysis,
             "dynamic_risk": dynamic_risk,
@@ -363,6 +370,7 @@ def dynamic_analyze(
                 launch_result.get("success"),
                 wait_result.get("success"),
                 behavior_snapshot.get("success"),
+                behavior_analysis.get("success"),
                 logcat_result.get("success"),
             ]
         ),
