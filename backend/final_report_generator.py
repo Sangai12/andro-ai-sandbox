@@ -3,11 +3,12 @@ AndroAI Sandbox - Final Report Generator
 
 This module builds and saves a unified final analysis report.
 
-Phase 38 and Phase 41 scope:
+Phase 38, Phase 41, and Phase 42 scope:
 - Combine static summary
 - Combine dynamic behavior analysis
 - Combine dynamic risk score
 - Combine overall risk assessment
+- Generate IOC summary
 - Generate final AI-style analyst report
 - Save final report as JSON evidence
 """
@@ -18,6 +19,7 @@ import json
 from typing import Any
 
 from backend.final_ai_report_generator import generate_final_ai_report
+from backend.ioc_extractor import extract_iocs_from_report
 
 
 def build_final_analysis_report(
@@ -40,6 +42,11 @@ def build_final_analysis_report(
     safe_package_name = package_name.replace(".", "_")
     report_filename = f"{safe_package_name}_{timestamp}_final.json"
     report_path = report_directory / report_filename
+
+    iocs = extract_iocs_from_report(
+        static_analysis=static_analysis,
+        runtime_analysis=runtime_analysis,
+    )
 
     final_report = {
         "report_metadata": {
@@ -87,6 +94,7 @@ def build_final_analysis_report(
             "error_count": runtime_analysis.get("error_count", 0),
             "log_path": runtime_analysis.get("log_path", ""),
         },
+        "iocs": iocs,
         "dynamic_risk": dynamic_risk,
         "combined_risk": combined_risk,
         "disclaimer": (
