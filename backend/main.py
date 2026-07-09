@@ -15,6 +15,7 @@ Current scope:
 - Add automated dynamic analysis endpoint
 - Add dynamic risk scoring
 - Add combined static and dynamic risk scoring
+- Add final JSON report generation
 - Register the APK upload router
 - Register the report download router
 """
@@ -36,6 +37,7 @@ from backend.dynamic_runner import (
     launch_app,
     wait_for_runtime,
 )
+from backend.final_report_generator import build_final_analysis_report
 from backend.report_handler import router as report_router
 from backend.runtime_log_analyzer import analyze_runtime_log
 from backend.static_analyzer import extract_apk_metadata
@@ -304,15 +306,27 @@ def dynamic_analyze(
     runtime_analysis = {}
     dynamic_risk = {}
     combined_risk = {}
+    final_report = {}
 
     if logcat_result.get("success"):
         runtime_analysis = analyze_runtime_log(
             logcat_result["log_path"],
         )
+
         dynamic_risk = calculate_dynamic_risk_score(runtime_analysis)
+
         combined_risk = calculate_combined_risk(
             static_analysis=static_analysis,
             dynamic_risk=dynamic_risk,
+        )
+
+        final_report = build_final_analysis_report(
+            apk_path=str(apk_path),
+            package_name=package_name,
+            static_analysis=static_analysis,
+            runtime_analysis=runtime_analysis,
+            dynamic_risk=dynamic_risk,
+            combined_risk=combined_risk,
         )
 
     return {
@@ -332,6 +346,7 @@ def dynamic_analyze(
             "runtime_analysis": runtime_analysis,
             "dynamic_risk": dynamic_risk,
             "combined_risk": combined_risk,
+            "final_report": final_report,
         },
         "success": all(
             [
