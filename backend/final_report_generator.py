@@ -3,11 +3,12 @@ AndroAI Sandbox - Final Report Generator
 
 This module builds and saves a unified final analysis report.
 
-Phase 38 scope:
+Phase 38 and Phase 41 scope:
 - Combine static summary
 - Combine dynamic behavior analysis
 - Combine dynamic risk score
 - Combine overall risk assessment
+- Generate final AI-style analyst report
 - Save final report as JSON evidence
 """
 
@@ -15,6 +16,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 import json
 from typing import Any
+
+from backend.final_ai_report_generator import generate_final_ai_report
 
 
 def build_final_analysis_report(
@@ -92,6 +95,10 @@ def build_final_analysis_report(
             "malicious behavior by themselves."
         ),
     }
+
+    final_report["ai_analyst_report"] = generate_final_ai_report(
+        final_report,
+    )
 
     report_path.write_text(
         json.dumps(
