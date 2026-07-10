@@ -3,7 +3,7 @@ AndroAI Sandbox - Analysis Pipeline
 
 This module orchestrates the full automated analysis workflow.
 
-Phase 50, Phase 51, Phase 52, Phase 53, and Milestone 2 scope:
+Current scope:
 - Keep FastAPI route logic small
 - Run static analysis
 - Run dynamic install, launch, wait, logcat, and behavior monitoring
@@ -12,6 +12,7 @@ Phase 50, Phase 51, Phase 52, Phase 53, and Milestone 2 scope:
 - Analyze runtime network intelligence
 - Analyze runtime filesystem intelligence
 - Analyze runtime intent intelligence
+- Analyze persistence intelligence
 - Calculate dynamic and combined risk
 - Generate final report
 - Add pipeline metadata
@@ -39,6 +40,7 @@ from backend.filesystem_intelligence import analyze_filesystem_intelligence
 from backend.final_report_generator import build_final_analysis_report
 from backend.intent_intelligence import analyze_intent_intelligence
 from backend.network_intelligence import analyze_network_intelligence
+from backend.persistence_intelligence import analyze_persistence_intelligence
 from backend.pipeline_metadata import build_pipeline_metadata
 from backend.process_intelligence import analyze_process_intelligence
 from backend.report_sanitizer import sanitize_dynamic_workflow
@@ -125,6 +127,7 @@ def run_full_dynamic_analysis_pipeline(
     network_intelligence: dict[str, Any] = {}
     filesystem_intelligence: dict[str, Any] = {}
     intent_intelligence: dict[str, Any] = {}
+    persistence_intelligence: dict[str, Any] = {}
     dynamic_risk: dict[str, Any] = {}
     combined_risk: dict[str, Any] = {}
     final_report: dict[str, Any] = {}
@@ -144,6 +147,13 @@ def run_full_dynamic_analysis_pipeline(
 
         intent_intelligence = analyze_intent_intelligence(
             runtime_analysis,
+        )
+
+        persistence_intelligence = analyze_persistence_intelligence(
+            process_intelligence=process_intelligence,
+            service_intelligence=service_intelligence,
+            filesystem_intelligence=filesystem_intelligence,
+            intent_intelligence=intent_intelligence,
         )
 
         dynamic_risk = calculate_dynamic_risk_score(runtime_analysis)
@@ -177,6 +187,7 @@ def run_full_dynamic_analysis_pipeline(
         "network_intelligence": network_intelligence,
         "filesystem_intelligence": filesystem_intelligence,
         "intent_intelligence": intent_intelligence,
+        "persistence_intelligence": persistence_intelligence,
         "dynamic_risk": dynamic_risk,
         "combined_risk": combined_risk,
         "final_report": final_report,
