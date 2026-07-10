@@ -3,12 +3,13 @@ AndroAI Sandbox - Analysis Pipeline
 
 This module orchestrates the full automated analysis workflow.
 
-Phase 50 scope:
+Phase 50 and Phase 51 scope:
 - Keep FastAPI route logic small
 - Run static analysis
 - Run dynamic install, launch, wait, logcat, and behavior monitoring
 - Calculate dynamic and combined risk
 - Generate final report
+- Add pipeline metadata
 - Sanitize API workflow response
 """
 
@@ -30,6 +31,7 @@ from backend.dynamic_runner import (
     wait_for_runtime,
 )
 from backend.final_report_generator import build_final_analysis_report
+from backend.pipeline_metadata import build_pipeline_metadata
 from backend.report_sanitizer import sanitize_dynamic_workflow
 from backend.runtime_log_analyzer import analyze_runtime_log
 from backend.static_analyzer import extract_apk_metadata
@@ -142,9 +144,17 @@ def run_full_dynamic_analysis_pipeline(
         "final_report": final_report,
     }
 
+    metadata = build_pipeline_metadata(
+        apk_path=apk_path,
+        package_name=package_name,
+        wait_seconds=wait_seconds,
+        workflow=workflow,
+    )
+
     sanitized_workflow = sanitize_dynamic_workflow(workflow)
 
     return {
+        "pipeline_metadata": metadata,
         "apk": str(apk_path),
         "package_name": package_name,
         "device": device,
