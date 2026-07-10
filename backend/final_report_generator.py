@@ -3,7 +3,7 @@ AndroAI Sandbox - Final Report Generator
 
 This module builds and saves a unified final analysis report.
 
-Phase 38, Phase 41, Phase 42, Phase 44, and Phase 47 scope:
+Phase 38, Phase 41, Phase 42, Phase 44, Phase 47, and Phase 49 scope:
 - Combine static summary
 - Combine dynamic behavior analysis
 - Combine behavior snapshot analysis
@@ -13,6 +13,7 @@ Phase 38, Phase 41, Phase 42, Phase 44, and Phase 47 scope:
 - Generate dynamic MITRE ATT&CK mapping
 - Generate evidence correlation summary
 - Generate final AI-style analyst report
+- Validate final report quality
 - Save final report as JSON evidence
 """
 
@@ -25,6 +26,7 @@ from backend.dynamic_mitre_mapper import map_dynamic_behavior_to_mitre
 from backend.evidence_correlator import correlate_evidence
 from backend.final_ai_report_generator import generate_final_ai_report
 from backend.ioc_extractor import extract_iocs_from_report
+from backend.report_validator import validate_final_report
 
 
 def build_final_analysis_report(
@@ -125,6 +127,10 @@ def build_final_analysis_report(
     }
 
     final_report["ai_analyst_report"] = generate_final_ai_report(
+        final_report,
+    )
+
+    final_report["report_validation"] = validate_final_report(
         final_report,
     )
 
