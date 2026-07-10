@@ -18,6 +18,7 @@ Current scope:
 - Add dynamic risk scoring
 - Add combined static and dynamic risk scoring
 - Add final JSON report generation
+- Add sanitized dynamic workflow response
 - Register the APK upload router
 - Register the report download router
 """
@@ -43,6 +44,7 @@ from backend.dynamic_runner import (
 )
 from backend.final_report_generator import build_final_analysis_report
 from backend.report_handler import router as report_router
+from backend.report_sanitizer import sanitize_dynamic_workflow
 from backend.runtime_log_analyzer import analyze_runtime_log
 from backend.static_analyzer import extract_apk_metadata
 from backend.upload_handler import router as upload_router
@@ -343,6 +345,22 @@ def dynamic_analyze(
             combined_risk=combined_risk,
         )
 
+    workflow = {
+        "clear_logcat": clear_result,
+        "install": install_result,
+        "launch": launch_result,
+        "wait": wait_result,
+        "behavior_snapshot": behavior_snapshot,
+        "behavior_analysis": behavior_analysis,
+        "collect_logcat": logcat_result,
+        "runtime_analysis": runtime_analysis,
+        "dynamic_risk": dynamic_risk,
+        "combined_risk": combined_risk,
+        "final_report": final_report,
+    }
+
+    workflow = sanitize_dynamic_workflow(workflow)
+
     return {
         "apk": str(apk_path),
         "package_name": package_name,
@@ -351,19 +369,7 @@ def dynamic_analyze(
             "summary": static_analysis.get("summary", {}),
             "finding_count": static_analysis.get("finding_count", 0),
         },
-        "workflow": {
-            "clear_logcat": clear_result,
-            "install": install_result,
-            "launch": launch_result,
-            "wait": wait_result,
-            "behavior_snapshot": behavior_snapshot,
-            "behavior_analysis": behavior_analysis,
-            "collect_logcat": logcat_result,
-            "runtime_analysis": runtime_analysis,
-            "dynamic_risk": dynamic_risk,
-            "combined_risk": combined_risk,
-            "final_report": final_report,
-        },
+        "workflow": workflow,
         "success": all(
             [
                 clear_result.get("success"),
