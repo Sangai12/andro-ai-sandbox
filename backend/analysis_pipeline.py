@@ -10,6 +10,7 @@ Phase 50, Phase 51, Phase 52, Phase 53, and Milestone 2 scope:
 - Analyze runtime process intelligence
 - Analyze runtime service intelligence
 - Analyze runtime network intelligence
+- Analyze runtime filesystem intelligence
 - Calculate dynamic and combined risk
 - Generate final report
 - Add pipeline metadata
@@ -33,6 +34,7 @@ from backend.dynamic_runner import (
     launch_app,
     wait_for_runtime,
 )
+from backend.filesystem_intelligence import analyze_filesystem_intelligence
 from backend.final_report_generator import build_final_analysis_report
 from backend.network_intelligence import analyze_network_intelligence
 from backend.pipeline_metadata import build_pipeline_metadata
@@ -119,6 +121,7 @@ def run_full_dynamic_analysis_pipeline(
 
     runtime_analysis: dict[str, Any] = {}
     network_intelligence: dict[str, Any] = {}
+    filesystem_intelligence: dict[str, Any] = {}
     dynamic_risk: dict[str, Any] = {}
     combined_risk: dict[str, Any] = {}
     final_report: dict[str, Any] = {}
@@ -129,6 +132,10 @@ def run_full_dynamic_analysis_pipeline(
         )
 
         network_intelligence = analyze_network_intelligence(
+            runtime_analysis,
+        )
+
+        filesystem_intelligence = analyze_filesystem_intelligence(
             runtime_analysis,
         )
 
@@ -161,6 +168,7 @@ def run_full_dynamic_analysis_pipeline(
         "collect_logcat": logcat_result,
         "runtime_analysis": runtime_analysis,
         "network_intelligence": network_intelligence,
+        "filesystem_intelligence": filesystem_intelligence,
         "dynamic_risk": dynamic_risk,
         "combined_risk": combined_risk,
         "final_report": final_report,
