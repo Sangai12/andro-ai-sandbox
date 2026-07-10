@@ -3,15 +3,16 @@ AndroAI Sandbox - Dynamic Runner
 
 This module provides the foundation for Android dynamic analysis.
 
-Phase 29, Phase 30, Phase 31, Phase 32, and Phase 34 scope:
+Current scope:
 - Verify ADB installation
 - Detect connected Android devices or emulators
 - Verify emulator readiness
 - Install APK files on a target device
 - Launch installed APK packages
-- Collect runtime logcat logs
+- Resolve active application process IDs
+- Collect package-filtered runtime logcat evidence
 - Wait during runtime observation
-- Prepare for automated dynamic analysis
+- Support automated dynamic analysis
 """
 
 from datetime import UTC, datetime
@@ -204,7 +205,7 @@ def get_launch_activity(
 
     success = (
         result.returncode == 0
-        and launch_activity
+        and bool(launch_activity)
         and "/" in launch_activity
     )
 
@@ -307,14 +308,61 @@ def clear_logcat(serial: str) -> dict[str, Any]:
     }
 
 
+def get_package_pids(
+    serial: str,
+    package_name: str,
+) -> dict[str, Any]:
+    """
+    Resolve all active process IDs associated with an Android package.
+    """
+
+    result = subprocess.run(
+        [
+            "adb",
+            "-s",
+            serial,
+            "shell",
+            "pidof",
+            package_name,
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    pids = [
+        value
+        for value in result.stdout.strip().split()
+        if value.isdigit()
+    ]
+
+    return {
+        "success": result.returncode == 0 and bool(pids),
+        "serial": serial,
+        "package_name": package_name,
+        "pids": pids,
+        "pid_count": len(pids),
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+        "message": (
+            "Package process IDs resolved successfully."
+            if pids
+            else "No active package process IDs were found."
+        ),
+    }
+
+
 def collect_logcat(
     serial: str,
     package_name: str,
     output_directory: str | Path = "logs",
-    line_count: int = 500,
+    line_count: int = 2000,
 ) -> dict[str, Any]:
     """
-    Collect recent logcat output and save it to a log file.
+    Collect recent logcat output filtered to the target package processes.
+
+    The complete device buffer is read first. Evidence is then restricted
+    to active process IDs belonging to the target package. If active PIDs
+    cannot be resolved, package-name matching is used as a fallback.
     """
 
     log_directory = Path(output_directory)
@@ -325,6 +373,11 @@ def collect_logcat(
     log_filename = f"{safe_package_name}_{timestamp}.log"
     log_path = log_directory / log_filename
 
+    package_pid_result = get_package_pids(
+        serial=serial,
+        package_name=package_name,
+    )
+
     result = subprocess.run(
         [
             "adb",
@@ -332,6 +385,8 @@ def collect_logcat(
             serial,
             "logcat",
             "-d",
+            "-v",
+            "threadtime",
             "-t",
             str(line_count),
         ],
@@ -341,9 +396,30 @@ def collect_logcat(
 
     success = result.returncode == 0
 
+    raw_lines = result.stdout.splitlines() if success else []
+    package_pids = set(package_pid_result.get("pids", []))
+
+    if package_pids:
+        filtered_lines = _filter_logcat_lines_by_pid(
+            lines=raw_lines,
+            package_pids=package_pids,
+        )
+        filter_mode = "package_pids"
+    else:
+        filtered_lines = _filter_logcat_lines_by_package(
+            lines=raw_lines,
+            package_name=package_name,
+        )
+        filter_mode = "package_name_fallback"
+
+    filtered_text = "\n".join(filtered_lines)
+
+    if filtered_text:
+        filtered_text += "\n"
+
     if success:
         log_path.write_text(
-            result.stdout,
+            filtered_text,
             encoding="utf-8",
         )
 
@@ -353,13 +429,93 @@ def collect_logcat(
         "package_name": package_name,
         "log_path": str(log_path) if success else "",
         "line_count_requested": line_count,
+        "raw_line_count": len(raw_lines),
+        "filtered_line_count": len(filtered_lines),
+        "filter_mode": filter_mode,
+        "package_pids": sorted(package_pids, key=int),
+        "package_pid_count": len(package_pids),
+        "pid_resolution": package_pid_result,
         "message": (
-            "Logcat collected successfully."
+            "Package-filtered logcat collected successfully."
             if success
             else "Failed to collect logcat."
         ),
         "stderr": result.stderr.strip(),
     }
+
+
+def _filter_logcat_lines_by_pid(
+    lines: list[str],
+    package_pids: set[str],
+) -> list[str]:
+    """
+    Keep logcat lines whose process ID belongs to the target package.
+
+    Threadtime logcat lines normally use this structure:
+
+    date time PID TID priority tag: message
+    """
+
+    filtered_lines = []
+    previous_line_matched = False
+
+    for line in lines:
+        parts = line.split()
+
+        current_line_matches = (
+            len(parts) >= 3
+            and parts[2] in package_pids
+        )
+
+        continuation_line = (
+            previous_line_matched
+            and (
+                line.startswith(" ")
+                or line.startswith("\t")
+                or line.lstrip().startswith("at ")
+                or line.lstrip().startswith("Caused by:")
+            )
+        )
+
+        if current_line_matches or continuation_line:
+            filtered_lines.append(line)
+
+        previous_line_matched = current_line_matches
+
+    return filtered_lines
+
+
+def _filter_logcat_lines_by_package(
+    lines: list[str],
+    package_name: str,
+) -> list[str]:
+    """
+    Use package-name matching when active process IDs are unavailable.
+    """
+
+    package_name_lower = package_name.lower()
+    filtered_lines = []
+    previous_line_matched = False
+
+    for line in lines:
+        current_line_matches = package_name_lower in line.lower()
+
+        continuation_line = (
+            previous_line_matched
+            and (
+                line.startswith(" ")
+                or line.startswith("\t")
+                or line.lstrip().startswith("at ")
+                or line.lstrip().startswith("Caused by:")
+            )
+        )
+
+        if current_line_matches or continuation_line:
+            filtered_lines.append(line)
+
+        previous_line_matched = current_line_matches
+
+    return filtered_lines
 
 
 def wait_for_runtime(seconds: int = 10) -> dict[str, Any]:
