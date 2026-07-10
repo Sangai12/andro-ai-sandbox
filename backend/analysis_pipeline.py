@@ -13,6 +13,7 @@ Current scope:
 - Analyze runtime filesystem intelligence
 - Analyze runtime intent intelligence
 - Analyze persistence intelligence
+- Build behavior timeline
 - Calculate dynamic and combined risk
 - Generate final report
 - Add pipeline metadata
@@ -26,6 +27,7 @@ from fastapi import HTTPException
 
 from backend.behavior_analyzer import analyze_behavior_snapshot
 from backend.behavior_monitor import collect_behavior_snapshot
+from backend.behavior_timeline import build_behavior_timeline
 from backend.combined_risk_engine import calculate_combined_risk
 from backend.dynamic_risk_score import calculate_dynamic_risk_score
 from backend.dynamic_runner import (
@@ -128,6 +130,7 @@ def run_full_dynamic_analysis_pipeline(
     filesystem_intelligence: dict[str, Any] = {}
     intent_intelligence: dict[str, Any] = {}
     persistence_intelligence: dict[str, Any] = {}
+    behavior_timeline: dict[str, Any] = {}
     dynamic_risk: dict[str, Any] = {}
     combined_risk: dict[str, Any] = {}
     final_report: dict[str, Any] = {}
@@ -193,6 +196,9 @@ def run_full_dynamic_analysis_pipeline(
         "final_report": final_report,
     }
 
+    behavior_timeline = build_behavior_timeline(workflow)
+    workflow["behavior_timeline"] = behavior_timeline
+
     metadata = build_pipeline_metadata(
         apk_path=apk_path,
         package_name=package_name,
@@ -223,6 +229,7 @@ def run_full_dynamic_analysis_pipeline(
                 process_intelligence.get("success"),
                 service_intelligence.get("success"),
                 logcat_result.get("success"),
+                behavior_timeline.get("success"),
             ]
         ),
     }
