@@ -4,11 +4,12 @@ AndroAI Sandbox - Persistence Intelligence
 This module correlates runtime intelligence to identify evidence
 that may indicate persistence-related behavior.
 
-Milestone 3 scope:
+Current scope:
 - Analyze persistence-related evidence
 - Correlate process, service, intent, and filesystem intelligence
+- Avoid treating normal active processes as persistence
+- Require stronger corroborating evidence
 - Produce evidence-based persistence indicators
-- Generate analyst-friendly persistence summary
 """
 
 from typing import Any
@@ -46,48 +47,94 @@ def analyze_persistence_intelligence(
         {},
     )
 
-    if process_flags.get("app_process_running"):
-        evidence.append(
-            {
-                "category": "process",
-                "title": "Application process remained active",
-                "confidence": "medium",
-            }
-        )
+    app_process_running = process_flags.get(
+        "app_process_running",
+        False,
+    )
 
-    if service_flags.get("services_running"):
-        evidence.append(
-            {
-                "category": "service",
-                "title": "Running Android services observed",
-                "confidence": "medium",
-            }
-        )
+    services_running = service_flags.get(
+        "services_running",
+        False,
+    )
 
-    if intent_flags.get("boot_related_event_detected"):
+    boot_event_detected = intent_flags.get(
+        "boot_related_event_detected",
+        False,
+    )
+
+    shared_preferences_detected = filesystem_flags.get(
+        "shared_preferences_detected",
+        False,
+    )
+
+    database_activity_detected = filesystem_flags.get(
+        "database_activity_detected",
+        False,
+    )
+
+    state_storage_detected = (
+        shared_preferences_detected
+        or database_activity_detected
+    )
+
+    correlated_background_activity = (
+        app_process_running
+        and services_running
+    )
+
+    possible_persistence_detected = (
+        boot_event_detected
+        or (
+            correlated_background_activity
+            and state_storage_detected
+        )
+    )
+
+    if boot_event_detected:
         evidence.append(
             {
                 "category": "intent",
                 "title": "Boot-related broadcast evidence detected",
                 "confidence": "high",
+                "reason": (
+                    "A boot-related Android event was observed during "
+                    "runtime analysis."
+                ),
             }
         )
 
-    if filesystem_flags.get("shared_preferences_detected"):
+    if (
+        possible_persistence_detected
+        and correlated_background_activity
+    ):
         evidence.append(
             {
-                "category": "filesystem",
-                "title": "Shared Preferences activity observed",
-                "confidence": "low",
+                "category": "runtime",
+                "title": (
+                    "Application process and service activity "
+                    "were observed together"
+                ),
+                "confidence": "medium",
+                "reason": (
+                    "The application had both an active process and "
+                    "running service evidence."
+                ),
             }
         )
 
-    if filesystem_flags.get("database_activity_detected"):
+    if (
+        possible_persistence_detected
+        and state_storage_detected
+    ):
         evidence.append(
             {
                 "category": "filesystem",
-                "title": "Database activity observed",
+                "title": "Application state-storage activity observed",
                 "confidence": "low",
+                "reason": (
+                    "Shared Preferences or database evidence was observed "
+                    "alongside stronger persistence-related indicators."
+                ),
             }
         )
 
@@ -99,19 +146,24 @@ def analyze_persistence_intelligence(
         "persistence_evidence": evidence,
         "overall_confidence": confidence,
         "persistence_flags": {
-            "possible_persistence_detected": len(evidence) > 0,
-            "boot_persistence_indicator": intent_flags.get(
-                "boot_related_event_detected",
-                False,
+            "possible_persistence_detected": (
+                possible_persistence_detected
             ),
-            "service_persistence_indicator": service_flags.get(
-                "services_running",
-                False,
+            "boot_persistence_indicator": boot_event_detected,
+            "service_persistence_indicator": (
+                services_running
+                and possible_persistence_detected
             ),
-            "process_persistence_indicator": process_flags.get(
-                "app_process_running",
-                False,
+            "process_persistence_indicator": (
+                app_process_running
+                and possible_persistence_detected
             ),
+            "state_storage_supporting_indicator": (
+                state_storage_detected
+                and possible_persistence_detected
+            ),
+            "active_process_observed": app_process_running,
+            "running_service_observed": services_running,
         },
         "message": "Persistence intelligence analyzed successfully.",
     }

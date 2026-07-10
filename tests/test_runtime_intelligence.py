@@ -179,42 +179,110 @@ def test_intent_intelligence_detects_boot_and_sms_events():
     assert result["intent_flags"]["connectivity_event_detected"] is True
 
 
-def test_persistence_intelligence_correlates_multiple_sources():
-    process_intelligence = {
-        "process_flags": {
-            "app_process_running": True,
-        },
-    }
-
-    service_intelligence = {
-        "service_flags": {
-            "services_running": True,
-        },
-    }
-
-    filesystem_intelligence = {
-        "filesystem_flags": {
-            "shared_preferences_detected": True,
-            "database_activity_detected": False,
-        },
-    }
-
-    intent_intelligence = {
-        "intent_flags": {
-            "boot_related_event_detected": True,
-        },
-    }
-
+def test_persistence_intelligence_ignores_active_process_alone():
     result = analyze_persistence_intelligence(
-        process_intelligence=process_intelligence,
-        service_intelligence=service_intelligence,
-        filesystem_intelligence=filesystem_intelligence,
-        intent_intelligence=intent_intelligence,
+        process_intelligence={
+            "process_flags": {
+                "app_process_running": True,
+            },
+        },
+        service_intelligence={
+            "service_flags": {
+                "services_running": False,
+            },
+        },
+        filesystem_intelligence={
+            "filesystem_flags": {
+                "shared_preferences_detected": False,
+                "database_activity_detected": False,
+            },
+        },
+        intent_intelligence={
+            "intent_flags": {
+                "boot_related_event_detected": False,
+            },
+        },
     )
 
     assert result["success"] is True
-    assert result["persistence_indicator_count"] == 4
-    assert result["overall_confidence"] == "medium"
+    assert result["persistence_indicator_count"] == 0
+    assert result["overall_confidence"] == "none"
+    assert (
+        result["persistence_flags"]["possible_persistence_detected"]
+        is False
+    )
+    assert (
+        result["persistence_flags"]["active_process_observed"]
+        is True
+    )
+    assert (
+        result["persistence_flags"]["process_persistence_indicator"]
+        is False
+    )
+
+
+def test_persistence_intelligence_ignores_process_and_service_without_storage():
+    result = analyze_persistence_intelligence(
+        process_intelligence={
+            "process_flags": {
+                "app_process_running": True,
+            },
+        },
+        service_intelligence={
+            "service_flags": {
+                "services_running": True,
+            },
+        },
+        filesystem_intelligence={
+            "filesystem_flags": {
+                "shared_preferences_detected": False,
+                "database_activity_detected": False,
+            },
+        },
+        intent_intelligence={
+            "intent_flags": {
+                "boot_related_event_detected": False,
+            },
+        },
+    )
+
+    assert result["success"] is True
+    assert result["persistence_indicator_count"] == 0
+    assert result["overall_confidence"] == "none"
+    assert (
+        result["persistence_flags"]["possible_persistence_detected"]
+        is False
+    )
+
+
+def test_persistence_intelligence_detects_boot_event():
+    result = analyze_persistence_intelligence(
+        process_intelligence={
+            "process_flags": {
+                "app_process_running": False,
+            },
+        },
+        service_intelligence={
+            "service_flags": {
+                "services_running": False,
+            },
+        },
+        filesystem_intelligence={
+            "filesystem_flags": {
+                "shared_preferences_detected": False,
+                "database_activity_detected": False,
+            },
+        },
+        intent_intelligence={
+            "intent_flags": {
+                "boot_related_event_detected": True,
+            },
+        },
+    )
+
+    assert result["success"] is True
+    assert result["persistence_indicator_count"] == 1
+    assert result["overall_confidence"] == "high"
     assert (
         result["persistence_flags"]["possible_persistence_detected"]
         is True
@@ -223,8 +291,52 @@ def test_persistence_intelligence_correlates_multiple_sources():
         result["persistence_flags"]["boot_persistence_indicator"]
         is True
     )
+
+
+def test_persistence_intelligence_requires_correlated_runtime_and_storage():
+    result = analyze_persistence_intelligence(
+        process_intelligence={
+            "process_flags": {
+                "app_process_running": True,
+            },
+        },
+        service_intelligence={
+            "service_flags": {
+                "services_running": True,
+            },
+        },
+        filesystem_intelligence={
+            "filesystem_flags": {
+                "shared_preferences_detected": True,
+                "database_activity_detected": False,
+            },
+        },
+        intent_intelligence={
+            "intent_flags": {
+                "boot_related_event_detected": False,
+            },
+        },
+    )
+
+    assert result["success"] is True
+    assert result["persistence_indicator_count"] == 2
+    assert result["overall_confidence"] == "medium"
+    assert (
+        result["persistence_flags"]["possible_persistence_detected"]
+        is True
+    )
     assert (
         result["persistence_flags"]["service_persistence_indicator"]
+        is True
+    )
+    assert (
+        result["persistence_flags"]["process_persistence_indicator"]
+        is True
+    )
+    assert (
+        result["persistence_flags"][
+            "state_storage_supporting_indicator"
+        ]
         is True
     )
 

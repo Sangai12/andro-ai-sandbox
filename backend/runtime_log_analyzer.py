@@ -4,19 +4,91 @@ AndroAI Sandbox - Runtime Log Analyzer
 This module extracts structured runtime behavior indicators
 from saved Android logcat files.
 
-Phase 33 and Phase 35 scope:
-- Read saved logcat logs
+Current scope:
+- Read saved package-filtered logcat logs
 - Detect crashes and exceptions
 - Detect permission denials
 - Detect network-related log entries
 - Detect WebView-related log entries
 - Detect security-related log entries
-- Classify runtime behavior into clean behavior flags
+- Reduce false positives from broad substring matching
 - Build structured dynamic evidence
 """
 
 from pathlib import Path
+import re
 from typing import Any
+
+
+CRASH_PATTERNS = [
+    re.compile(r"\bfatal exception\b", re.IGNORECASE),
+    re.compile(r"\bforce finishing activity\b", re.IGNORECASE),
+    re.compile(r"\bprocess crashed\b", re.IGNORECASE),
+    re.compile(r"\bfatal signal\b", re.IGNORECASE),
+]
+
+EXCEPTION_PATTERNS = [
+    re.compile(r"\bexception\b", re.IGNORECASE),
+    re.compile(r"\bjava\.[a-z0-9_.]+exception\b", re.IGNORECASE),
+    re.compile(r"\bnullpointerexception\b", re.IGNORECASE),
+    re.compile(r"\bsecurityexception\b", re.IGNORECASE),
+    re.compile(r"\billegalstateexception\b", re.IGNORECASE),
+]
+
+PERMISSION_DENIAL_PATTERNS = [
+    re.compile(r"\bpermission denial\b", re.IGNORECASE),
+    re.compile(r"\bpermission denied\b", re.IGNORECASE),
+    re.compile(r"\bdenied permission\b", re.IGNORECASE),
+    re.compile(r"\bsecurityexception\b", re.IGNORECASE),
+]
+
+NETWORK_PATTERNS = [
+    re.compile(r"https?://", re.IGNORECASE),
+    re.compile(r"\bconnecting to\b", re.IGNORECASE),
+    re.compile(r"\bconnection (?:opened|established|failed)\b", re.IGNORECASE),
+    re.compile(r"\bsocket\b", re.IGNORECASE),
+    re.compile(r"\bdns\b", re.IGNORECASE),
+    re.compile(r"\bgetaddrinfo\b", re.IGNORECASE),
+    re.compile(r"\bssl\b", re.IGNORECASE),
+    re.compile(r"\btls\b", re.IGNORECASE),
+    re.compile(r"\bhandshake\b", re.IGNORECASE),
+    re.compile(r"\bunknownhostexception\b", re.IGNORECASE),
+]
+
+WEBVIEW_PATTERNS = [
+    re.compile(r"\bwebview\b", re.IGNORECASE),
+    re.compile(r"\bchromium\b", re.IGNORECASE),
+    re.compile(r"\bjavascript\b", re.IGNORECASE),
+    re.compile(r"\bconsole\.(?:log|warn|error)\b", re.IGNORECASE),
+]
+
+SECURITY_PATTERNS = [
+    re.compile(r"\bselinux\b", re.IGNORECASE),
+    re.compile(r"\bavc:\s*denied\b", re.IGNORECASE),
+    re.compile(r"\bfrida\b", re.IGNORECASE),
+    re.compile(r"\bxposed\b", re.IGNORECASE),
+    re.compile(r"\bmagisk\b", re.IGNORECASE),
+    re.compile(r"\bdebugger detected\b", re.IGNORECASE),
+    re.compile(r"\broot detected\b", re.IGNORECASE),
+    re.compile(r"\broot access\b", re.IGNORECASE),
+    re.compile(r"\bsu binary\b", re.IGNORECASE),
+]
+
+WARNING_PATTERNS = [
+    re.compile(
+        r"^\S+\s+\S+\s+\d+\s+\d+\s+W\s+",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\bWARN(?:ING)?\s*:", re.IGNORECASE),
+]
+
+ERROR_PATTERNS = [
+    re.compile(
+        r"^\S+\s+\S+\s+\d+\s+\d+\s+E\s+",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\bERROR\s*:", re.IGNORECASE),
+]
 
 
 def analyze_runtime_log(
@@ -42,90 +114,44 @@ def analyze_runtime_log(
 
     lines = log_text.splitlines()
 
-    crash_lines = _find_matching_lines(
+    crash_lines = _find_regex_matching_lines(
         lines,
-        [
-            "FATAL EXCEPTION",
-            "AndroidRuntime",
-            "Force finishing activity",
-            "Process crashed",
-        ],
+        CRASH_PATTERNS,
     )
 
-    exception_lines = _find_matching_lines(
+    exception_lines = _find_regex_matching_lines(
         lines,
-        [
-            "Exception",
-            "java.lang.",
-            "NullPointerException",
-            "SecurityException",
-            "IllegalStateException",
-        ],
+        EXCEPTION_PATTERNS,
     )
 
-    permission_denial_lines = _find_matching_lines(
+    permission_denial_lines = _find_regex_matching_lines(
         lines,
-        [
-            "Permission Denial",
-            "permission denied",
-            "denied permission",
-            "SecurityException",
-        ],
+        PERMISSION_DENIAL_PATTERNS,
     )
 
-    network_lines = _find_matching_lines(
+    network_lines = _find_regex_matching_lines(
         lines,
-        [
-            "http://",
-            "https://",
-            "socket",
-            "connect",
-            "dns",
-            "network",
-            "ssl",
-            "tls",
-        ],
+        NETWORK_PATTERNS,
     )
 
-    webview_lines = _find_matching_lines(
+    webview_lines = _find_regex_matching_lines(
         lines,
-        [
-            "WebView",
-            "chromium",
-            "javascript",
-            "console",
-        ],
+        WEBVIEW_PATTERNS,
     )
 
-    security_lines = _find_matching_lines(
+    security_lines = _find_regex_matching_lines(
         lines,
-        [
-            "SELinux",
-            "avc: denied",
-            "root",
-            "su",
-            "debugger",
-            "frida",
-            "xposed",
-        ],
+        SECURITY_PATTERNS,
     )
 
-    warning_lines = _find_matching_lines(
+    warning_lines = _find_regex_matching_lines(
         lines,
-        [
-            " W ",
-            " WARN ",
-            "Warning",
-        ],
+        WARNING_PATTERNS,
     )
 
-    error_lines = _find_matching_lines(
+    error_lines = _find_regex_matching_lines(
         lines,
-        [
-            " E ",
-            " ERROR ",
-            "Error",
-        ],
+        ERROR_PATTERNS,
     )
 
     behavior_summary = _build_behavior_summary(
@@ -213,21 +239,19 @@ def _build_behavior_summary(
     }
 
 
-def _find_matching_lines(
+def _find_regex_matching_lines(
     lines: list[str],
-    keywords: list[str],
+    patterns: list[re.Pattern[str]],
     limit: int = 50,
 ) -> list[str]:
     """
-    Return log lines matching any keyword.
+    Return log lines matching at least one precise regex pattern.
     """
 
-    matches: list[str] = []
+    matches = []
 
     for line in lines:
-        line_lower = line.lower()
-
-        if any(keyword.lower() in line_lower for keyword in keywords):
+        if any(pattern.search(line) for pattern in patterns):
             matches.append(line.strip())
 
         if len(matches) >= limit:
