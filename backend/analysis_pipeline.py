@@ -3,11 +3,12 @@ AndroAI Sandbox - Analysis Pipeline
 
 This module orchestrates the full automated analysis workflow.
 
-Phase 50, Phase 51, and Phase 52 scope:
+Phase 50, Phase 51, Phase 52, and Phase 53 scope:
 - Keep FastAPI route logic small
 - Run static analysis
 - Run dynamic install, launch, wait, logcat, and behavior monitoring
 - Analyze runtime process intelligence
+- Analyze runtime service intelligence
 - Calculate dynamic and combined risk
 - Generate final report
 - Add pipeline metadata
@@ -36,6 +37,7 @@ from backend.pipeline_metadata import build_pipeline_metadata
 from backend.process_intelligence import analyze_process_intelligence
 from backend.report_sanitizer import sanitize_dynamic_workflow
 from backend.runtime_log_analyzer import analyze_runtime_log
+from backend.service_intelligence import analyze_service_intelligence
 from backend.static_analyzer import extract_apk_metadata
 
 
@@ -104,6 +106,10 @@ def run_full_dynamic_analysis_pipeline(
         behavior_analysis,
     )
 
+    service_intelligence = analyze_service_intelligence(
+        behavior_analysis,
+    )
+
     logcat_result = collect_logcat(
         serial=device["serial"],
         package_name=package_name,
@@ -144,6 +150,7 @@ def run_full_dynamic_analysis_pipeline(
         "behavior_snapshot": behavior_snapshot,
         "behavior_analysis": behavior_analysis,
         "process_intelligence": process_intelligence,
+        "service_intelligence": service_intelligence,
         "collect_logcat": logcat_result,
         "runtime_analysis": runtime_analysis,
         "dynamic_risk": dynamic_risk,
@@ -179,6 +186,7 @@ def run_full_dynamic_analysis_pipeline(
                 behavior_snapshot.get("success"),
                 behavior_analysis.get("success"),
                 process_intelligence.get("success"),
+                service_intelligence.get("success"),
                 logcat_result.get("success"),
             ]
         ),
