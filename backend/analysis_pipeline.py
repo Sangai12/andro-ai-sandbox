@@ -3,12 +3,13 @@ AndroAI Sandbox - Analysis Pipeline
 
 This module orchestrates the full automated analysis workflow.
 
-Phase 50, Phase 51, Phase 52, and Phase 53 scope:
+Phase 50, Phase 51, Phase 52, Phase 53, and Milestone 2 scope:
 - Keep FastAPI route logic small
 - Run static analysis
 - Run dynamic install, launch, wait, logcat, and behavior monitoring
 - Analyze runtime process intelligence
 - Analyze runtime service intelligence
+- Analyze runtime network intelligence
 - Calculate dynamic and combined risk
 - Generate final report
 - Add pipeline metadata
@@ -33,6 +34,7 @@ from backend.dynamic_runner import (
     wait_for_runtime,
 )
 from backend.final_report_generator import build_final_analysis_report
+from backend.network_intelligence import analyze_network_intelligence
 from backend.pipeline_metadata import build_pipeline_metadata
 from backend.process_intelligence import analyze_process_intelligence
 from backend.report_sanitizer import sanitize_dynamic_workflow
@@ -116,6 +118,7 @@ def run_full_dynamic_analysis_pipeline(
     )
 
     runtime_analysis: dict[str, Any] = {}
+    network_intelligence: dict[str, Any] = {}
     dynamic_risk: dict[str, Any] = {}
     combined_risk: dict[str, Any] = {}
     final_report: dict[str, Any] = {}
@@ -123,6 +126,10 @@ def run_full_dynamic_analysis_pipeline(
     if logcat_result.get("success"):
         runtime_analysis = analyze_runtime_log(
             logcat_result["log_path"],
+        )
+
+        network_intelligence = analyze_network_intelligence(
+            runtime_analysis,
         )
 
         dynamic_risk = calculate_dynamic_risk_score(runtime_analysis)
@@ -153,6 +160,7 @@ def run_full_dynamic_analysis_pipeline(
         "service_intelligence": service_intelligence,
         "collect_logcat": logcat_result,
         "runtime_analysis": runtime_analysis,
+        "network_intelligence": network_intelligence,
         "dynamic_risk": dynamic_risk,
         "combined_risk": combined_risk,
         "final_report": final_report,
