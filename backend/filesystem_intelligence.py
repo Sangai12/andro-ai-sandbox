@@ -39,20 +39,17 @@ def analyze_filesystem_intelligence(
     for indicator in indicators:
         text = str(indicator).lower()
 
-        if "/data/data/" in text:
-            data_paths.append(indicator)
+        if "/databases/" in text:
+            databases.append(indicator)
+
+        elif "/shared_prefs/" in text:
+            shared_prefs.append(indicator)
 
         elif "/cache/" in text:
             cache_paths.append(indicator)
 
         elif "/files/" in text:
             files_paths.append(indicator)
-
-        elif "/databases/" in text:
-            databases.append(indicator)
-
-        elif "/shared_prefs/" in text:
-            shared_prefs.append(indicator)
 
         elif "/download" in text:
             downloads.append(indicator)
@@ -67,6 +64,9 @@ def analyze_filesystem_intelligence(
             )
         ):
             temporary.append(indicator)
+
+        elif "/data/data/" in text:
+            data_paths.append(indicator)
 
         else:
             other.append(indicator)
@@ -92,7 +92,14 @@ def analyze_filesystem_intelligence(
         "other": other[:20],
         "filesystem_flags": {
             "filesystem_activity_detected": len(indicators) > 0,
-            "app_data_access_detected": len(data_paths) > 0,
+            "app_data_access_detected": (
+                len(data_paths)
+                + len(cache_paths)
+                + len(files_paths)
+                + len(databases)
+                + len(shared_prefs)
+            )
+            > 0,
             "database_activity_detected": len(databases) > 0,
             "shared_preferences_detected": len(shared_prefs) > 0,
             "temporary_file_activity_detected": len(temporary) > 0,
